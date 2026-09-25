@@ -1,23 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Activity,
-  Award,
-  CheckCircle2,
-  Database,
-  Droplet,
-  FileText,
-  HeartPulse,
-  Moon,
-  Sparkles,
-  Target,
-  TrendingDown,
-  TrendingUp,
+  Activity, Award, CheckCircle2, Database, Droplet, FileText,
+  HeartPulse, Moon, Sparkles, Target, TrendingDown, TrendingUp,
 } from 'lucide-react';
 import { useActiveProfile } from '@/context/ActiveProfileContext';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Loading } from '@/components/feedback/Loading';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -32,19 +21,9 @@ import { loadDemoData } from '@/lib/checkins';
 import { computeGoalProgress, GOAL_CATEGORY_LABELS } from '@/lib/goals';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
-  GLUCOSE,
-  SLEEP_GOAL_HOURS,
-  STEP_GOAL,
-  WATER_GOAL_ML,
-  addDays,
-  computeStats,
-  dateRange,
-  evaluateAlerts,
-  findInsights,
-  inWindow,
-  loggingStreak,
-  longDate,
-  todayISO,
+  GLUCOSE, SLEEP_GOAL_HOURS, STEP_GOAL, WATER_GOAL_ML,
+  addDays, computeStats, dateRange, evaluateAlerts, findInsights,
+  inWindow, loggingStreak, longDate, todayISO,
 } from '@/lib/health';
 
 export function DashboardPage() {
@@ -97,10 +76,10 @@ export function DashboardPage() {
   if (checkIns.length === 0) {
     return (
       <div className="space-y-6">
-        <Heading name={name} />
+        <Heading name={name} todayLogged={false} />
         <EmptyState
           icon={<HeartPulse className="h-6 w-6" />}
-          title="Start with today’s check-in"
+          title="Start with today's check-in"
           description="Log medication, blood sugar and a few habits. After a few days your trends, alerts and coach notes appear here."
           action={
             <div className="flex flex-wrap justify-center gap-3">
@@ -112,42 +91,48 @@ export function DashboardPage() {
             </div>
           }
         />
-        {seedError && <p className="text-center text-sm text-error-600">{seedError}</p>}
+        {seedError && <p className="text-center text-sm" style={{ color: 'var(--danger)' }}>{seedError}</p>}
       </div>
     );
   }
 
   const { stats, prevStats, alerts, insights, streak, todayEntry, week } = view;
-  const fastingDiff =
-    stats.avgFasting !== null && prevStats.avgFasting !== null ? stats.avgFasting - prevStats.avgFasting : null;
+  const fastingDiff = stats.avgFasting !== null && prevStats.avgFasting !== null
+    ? stats.avgFasting - prevStats.avgFasting : null;
+
+  const activeGoals = goals.filter((g) => g.status === 'active');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Header row */}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <Heading name={name} />
+        <Heading name={name} todayLogged={!!todayEntry} />
         {todayEntry ? (
-          <Link to="/check-ins" className="inline-flex items-center gap-2 rounded-lg bg-success-50 px-3 py-2 text-sm font-medium text-success-800 hover:bg-success-100">
+          <Link
+            to="/check-ins"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold"
+            style={{ background: 'var(--good-bg)', color: 'var(--good-text)' }}
+          >
             <CheckCircle2 className="h-4 w-4" />
-            Today is logged. Edit
+            Today is logged · Edit
           </Link>
         ) : (
           <Button onClick={() => navigate('/check-ins')}>Log today</Button>
         )}
       </div>
 
-      <AlertList alerts={alerts} />
+      {/* Alert rail */}
+      {alerts.length > 0 && <AlertList alerts={alerts} />}
 
-      {/* 1. Today's summary */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* KPI row — 4 stat tiles with coloured top-stripe */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
-          label="Fasting sugar, 7-day avg"
+          label="Fasting sugar · 7-day avg"
           value={stats.avgFasting === null ? '–' : Math.round(stats.avgFasting).toString()}
           unit="mg/dL"
           tone={stats.avgFasting === null ? 'neutral' : stats.avgFasting <= GLUCOSE.FASTING_MAX ? 'good' : 'watch'}
           note={
-            fastingDiff === null ? (
-              `Target ${GLUCOSE.FASTING_MIN}–${GLUCOSE.FASTING_MAX}`
-            ) : (
+            fastingDiff === null ? `Target ${GLUCOSE.FASTING_MIN}–${GLUCOSE.FASTING_MAX}` : (
               <span className="inline-flex items-center gap-1">
                 {fastingDiff <= 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
                 {Math.abs(Math.round(fastingDiff))} vs last week
@@ -178,28 +163,30 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Big trend chart */}
+      {/* Main 2-col: glucose chart + coach notes */}
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader title="Blood sugar, last 7 days" subtitle="Red dots are below 70 or 250 and above." className="mb-4" />
+          <CardHeader title="Blood sugar · last 7 days" subtitle="Red markers are below 70 or above 250 mg/dL" className="mb-4" />
           {week.some((c) => c.glucose_fasting !== null || c.glucose_post_meal !== null) ? (
             <GlucoseChart days={days} checkIns={week} />
           ) : (
-            <p className="py-10 text-center text-sm text-neutral-500">No blood-sugar readings this week yet.</p>
+            <p className="py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No blood-sugar readings this week yet.</p>
           )}
         </Card>
 
-        {/* Coach notes */}
         <Card className="flex flex-col">
-          <CardHeader title="Coach notes" subtitle="Patterns found in your logs" className="mb-4" />
+          <CardHeader title="Coach notes" subtitle="Patterns from your logs" className="mb-4" />
           {insights.length === 0 ? (
-            <p className="text-sm text-neutral-600">Patterns appear once there are a few days of readings, sleep and steps to compare.</p>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Patterns appear once there are a few days of readings, sleep and steps to compare.
+            </p>
           ) : (
             <ul className="space-y-3">
               {insights.slice(0, 4).map((i) => (
-                <li key={i.text} className="flex gap-2.5 text-sm text-neutral-800">
+                <li key={i.text} className="flex gap-2.5 text-sm leading-snug" style={{ color: 'var(--text-secondary)' }}>
                   <span
-                    className={i.tone === 'positive' ? 'mt-1.5 h-2 w-2 shrink-0 rounded-full bg-success-500' : 'mt-1.5 h-2 w-2 shrink-0 rounded-full bg-warning-500'}
+                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: i.tone === 'positive' ? 'var(--good)' : 'var(--warn)' }}
                     aria-hidden
                   />
                   {i.text}
@@ -207,83 +194,88 @@ export function DashboardPage() {
               ))}
             </ul>
           )}
-          <Link to="/ai-summary" className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-medium text-primary-700 hover:text-primary-800">
+          <Link
+            to="/ai-summary"
+            className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold"
+            style={{ color: 'var(--accent)' }}
+          >
             <Sparkles className="h-4 w-4" />
-            Get your weekly summary
+            Generate AI summary
           </Link>
         </Card>
       </div>
 
-      {/* 3-6. Exercise / Water / Sleep / Weight */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader
-            title="Steps"
-            subtitle={`Goal ${STEP_GOAL.toLocaleString()}`}
-            className="mb-3"
-            action={<Activity className="h-4 w-4 text-neutral-400" />}
-          />
-          <p className="mb-3 text-xs text-neutral-500">
-            Avg {stats.avgSteps === null ? '–' : Math.round(stats.avgSteps).toLocaleString()}
-          </p>
+      {/* Habit row: Steps / Water / Sleep / Weight */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <HabitCard
+          title="Steps"
+          icon={<Activity className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
+          value={stats.avgSteps === null ? null : Math.round(stats.avgSteps)}
+          unit="avg/day"
+          goal={STEP_GOAL}
+          goalLabel={`Goal ${STEP_GOAL.toLocaleString()}`}
+        >
           <MiniBars days={days} checkIns={week} field="steps" goal={STEP_GOAL} color="secondary" format={(v) => `${v.toLocaleString()} steps`} />
-        </Card>
-        <Card>
-          <CardHeader
-            title="Water"
-            subtitle={`Goal ${(WATER_GOAL_ML / 1000).toFixed(1)} L`}
-            className="mb-3"
-            action={<Droplet className="h-4 w-4 text-neutral-400" />}
-          />
-          <p className="mb-3 text-xs text-neutral-500">
-            Avg {stats.avgWater === null ? '–' : `${Math.round(stats.avgWater)} ml`}
-          </p>
+        </HabitCard>
+
+        <HabitCard
+          title="Water"
+          icon={<Droplet className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
+          value={stats.avgWater === null ? null : Math.round(stats.avgWater)}
+          unit="ml avg/day"
+          goal={WATER_GOAL_ML}
+          goalLabel={`Goal ${(WATER_GOAL_ML / 1000).toFixed(1)} L`}
+        >
           <MiniBars days={days} checkIns={week} field="water_ml" goal={WATER_GOAL_ML} color="primary" format={(v) => `${v} ml`} />
-        </Card>
-        <Card>
-          <CardHeader
-            title="Sleep"
-            subtitle={`Goal ${SLEEP_GOAL_HOURS} h`}
-            className="mb-3"
-            action={<Moon className="h-4 w-4 text-neutral-400" />}
-          />
-          <p className="mb-3 text-xs text-neutral-500">
-            Avg {stats.avgSleep === null ? '–' : `${stats.avgSleep.toFixed(1)} h`}
-          </p>
+        </HabitCard>
+
+        <HabitCard
+          title="Sleep"
+          icon={<Moon className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
+          value={stats.avgSleep === null ? null : stats.avgSleep}
+          unit="h avg/night"
+          goal={SLEEP_GOAL_HOURS}
+          goalLabel={`Goal ${SLEEP_GOAL_HOURS} h`}
+          decimals={1}
+        >
           <MiniBars days={days} checkIns={week} field="sleep_hours" goal={SLEEP_GOAL_HOURS} color="accent" format={(v) => `${v} h`} />
-        </Card>
+        </HabitCard>
+
         <Card>
-          <CardHeader title="Weight" className="mb-3" />
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Weight</p>
+          </div>
           {stats.latestWeight === null ? (
-            <p className="py-8 text-center text-sm text-neutral-500">Log your weight to see the trend.</p>
+            <p className="py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Log your weight to see the trend.</p>
           ) : (
             <>
-              <p className="text-3xl font-bold tabular-nums text-neutral-900">
+              <p className="text-4xl font-bold tabular-nums" style={{ color: 'var(--text-primary)', letterSpacing: '-.03em' }}>
                 {stats.latestWeight.toFixed(1)}
-                <span className="ml-1 text-sm font-medium text-neutral-500">kg</span>
+                <span className="text-base font-medium ml-1" style={{ color: 'var(--text-muted)' }}>kg</span>
               </p>
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="mt-2 text-xs" style={{ color: stats.weightChange && stats.weightChange < 0 ? 'var(--good)' : 'var(--text-muted)' }}>
                 {stats.weightChange === null || stats.weightChange === 0
                   ? 'No change this week'
                   : stats.weightChange > 0
-                    ? `Up ${stats.weightChange.toFixed(1)} kg this week`
-                    : `Down ${Math.abs(stats.weightChange).toFixed(1)} kg this week`}
+                    ? `↑ Up ${stats.weightChange.toFixed(1)} kg this week`
+                    : `↓ Down ${Math.abs(stats.weightChange).toFixed(1)} kg this week`}
               </p>
             </>
           )}
         </Card>
       </div>
 
-      {/* 7. Goals   8. Recent check-ins   9. Recent records   10. Achievements */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Bottom row: Goals + Recent check-ins + Records + Achievements */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Goals */}
         <Card>
           <CardHeader
             title="Goals"
-            subtitle="Active targets, tracked against real logged data"
+            subtitle="Active targets · tracked from real data"
             className="mb-4"
-            action={<Target className="h-4 w-4 text-neutral-400" />}
+            action={<Target className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
           />
-          {goals.filter((g) => g.status === 'active').length === 0 ? (
+          {activeGoals.length === 0 ? (
             <EmptyState
               icon={<Target className="h-5 w-5" />}
               title="No goals yet"
@@ -292,90 +284,139 @@ export function DashboardPage() {
             />
           ) : (
             <div className="space-y-4">
-              {goals.filter((g) => g.status === 'active').slice(0, 3).map((g) => {
+              {activeGoals.slice(0, 3).map((g) => {
                 const progress = computeGoalProgress(g, checkIns, activities);
                 return (
                   <div key={g.id}>
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-neutral-800">{g.title}</span>
-                      <Badge variant="neutral">{GOAL_CATEGORY_LABELS[g.category]}</Badge>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{g.title}</span>
+                      <span className="pill pill-good shrink-0">{GOAL_CATEGORY_LABELS[g.category]}</span>
                     </div>
                     {progress.measurable ? (
                       <ProgressBar value={progress.value ?? 0} max={progress.target ?? 1} />
                     ) : (
-                      <p className="text-xs text-neutral-500">Tracked manually</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Tracked manually</p>
                     )}
                   </div>
                 );
               })}
-              <Link to="/goals" className="inline-block text-sm font-medium text-primary-700 hover:text-primary-800">
-                See all goals
+              <Link to="/goals" className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+                See all goals →
               </Link>
             </div>
           )}
         </Card>
 
+        {/* Recent check-ins */}
         <Card>
-          <CardHeader
-            title="Recent check-ins"
-            subtitle="Your last three entries"
-            className="mb-4"
-          />
-          {view.week.length === 0 ? (
-            <p className="py-8 text-center text-sm text-neutral-500">No check-ins this week yet.</p>
+          <CardHeader title="Recent check-ins" subtitle="Your last three entries" className="mb-4" />
+          {week.length === 0 ? (
+            <p className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No check-ins this week yet.</p>
           ) : (
             <ul className="space-y-2">
-              {[...view.week].reverse().slice(0, 3).map((c) => (
-                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-100 px-3 py-2">
-                  <span className="text-sm font-medium text-neutral-900">{longDate(c.date)}</span>
+              {[...week].reverse().slice(0, 3).map((c) => (
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2"
+                  style={{ border: '1px solid var(--border)', background: 'var(--bg-card-2, var(--bg-card))' }}
+                >
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{longDate(c.date)}</span>
                   <span className="flex flex-wrap gap-1.5">
-                    {c.glucose_fasting !== null && <Badge variant="neutral">F {c.glucose_fasting}</Badge>}
-                    {c.glucose_post_meal !== null && <Badge variant="neutral">P {c.glucose_post_meal}</Badge>}
-                    {c.steps !== null && <Badge variant="neutral">{c.steps.toLocaleString()} steps</Badge>}
+                    {c.glucose_fasting !== null && (
+                      <span className="pill" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
+                        F {c.glucose_fasting}
+                      </span>
+                    )}
+                    {c.glucose_post_meal !== null && (
+                      <span className="pill" style={{ background: 'var(--warn-bg)', color: 'var(--warn-text)', border: '1px solid rgba(245,158,11,.2)' }}>
+                        P {c.glucose_post_meal}
+                      </span>
+                    )}
+                    {c.steps !== null && (
+                      <span className="pill" style={{ background: 'var(--bg-card-2, var(--bg-card))', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                        {c.steps.toLocaleString()} steps
+                      </span>
+                    )}
                   </span>
                 </li>
               ))}
             </ul>
           )}
-          <Link to="/check-ins" className="mt-4 inline-block text-sm font-medium text-primary-700 hover:text-primary-800">
-            See all check-ins
+          <Link to="/check-ins" className="mt-4 inline-block text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+            See all check-ins →
           </Link>
         </Card>
 
         <Card>
-          <CardHeader title="Recent medical records" className="mb-4" action={<FileText className="h-4 w-4 text-neutral-400" />} />
+          <CardHeader title="Recent medical records" className="mb-4" action={<FileText className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />} />
           <EmptyState
             icon={<FileText className="h-5 w-5" />}
             title="No records uploaded"
-            description="Upload lab reports, prescriptions and scans in Phase 9."
+            description="Upload lab reports, prescriptions and scans in Documents."
           />
         </Card>
 
         <Card>
-          <CardHeader title="Achievements" className="mb-4" action={<Award className="h-4 w-4 text-neutral-400" />} />
+          <CardHeader title="Achievements" className="mb-4" action={<Award className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />} />
           <EmptyState
             icon={<Award className="h-5 w-5" />}
             title="Badges will appear here"
-            description="Streaks and goal completions will be awarded as you keep logging."
+            description="Streaks and goal completions are awarded as you keep logging."
           />
         </Card>
       </div>
 
-      <p className="text-xs text-neutral-500">
-        Targets are common defaults for adults with Type 2 Diabetes. Your doctor may set different ones. This app does
-        not replace medical advice.
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        Targets are common defaults for adults with Type 2 Diabetes. Your doctor may set different ones. This app does not replace medical advice.
       </p>
     </div>
   );
 }
 
-function Heading({ name }: { name: string }) {
+function Heading({ name, todayLogged }: { name: string; todayLogged: boolean }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   return (
     <div>
-      <h2 className="text-2xl font-bold text-neutral-900">{greeting}, {name}</h2>
-      <p className="mt-1 text-sm text-neutral-600">Blood sugar, medication and habits for the past week.</p>
+      <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-.02em' }}>
+        {greeting}, {name}
+      </h2>
+      <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+        {todayLogged ? 'All caught up · blood sugar, medication and habits for the past week.' : 'Blood sugar, medication and habits for the past week.'}
+      </p>
     </div>
+  );
+}
+
+function HabitCard({
+  title, icon, value, unit, goal, goalLabel, decimals = 0, children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  value: number | null;
+  unit: string;
+  goal: number;
+  goalLabel: string;
+  decimals?: number;
+  children: React.ReactNode;
+}) {
+  const pct = value !== null ? Math.round((value / goal) * 100) : null;
+  const tone = pct === null ? 'neutral' : pct >= 100 ? 'good' : pct >= 70 ? 'warn' : 'neutral';
+  const valColor = tone === 'good' ? 'var(--good)' : tone === 'warn' ? 'var(--warn)' : 'var(--text-primary)';
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{title}</p>
+        {icon}
+      </div>
+      <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{goalLabel}</p>
+      {value !== null && (
+        <p className="text-sm font-semibold mb-2" style={{ color: valColor }}>
+          Avg {decimals > 0 ? value.toFixed(decimals) : Math.round(value).toLocaleString()} {unit}
+        </p>
+      )}
+      {children}
+    </Card>
   );
 }

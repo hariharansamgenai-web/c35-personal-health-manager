@@ -1,32 +1,39 @@
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+
+type Tone = 'good' | 'watch' | 'neutral';
 
 interface StatTileProps {
   label: string;
   value: string;
   unit?: string;
+  tone?: Tone;
   note?: ReactNode;
-  tone?: 'good' | 'watch' | 'neutral';
 }
 
-export function StatTile({ label, value, unit, note, tone = 'neutral' }: StatTileProps) {
+const toneColor: Record<Tone, string> = {
+  good:    'var(--good)',
+  watch:   'var(--warn)',
+  neutral: 'var(--accent)',
+};
+
+const toneBorder: Record<Tone, string> = {
+  good:    '#10b981',
+  watch:   '#f59e0b',
+  neutral: 'var(--border-card)',
+};
+
+export function StatTile({ label, value, unit, tone = 'neutral', note }: StatTileProps) {
   return (
-    <div className="card-base p-4">
-      <p className="text-sm text-neutral-600">{label}</p>
-      <p className="mt-1 flex items-baseline gap-1">
-        <span
-          className={cn(
-            'text-2xl font-bold tabular-nums',
-            tone === 'good' && 'text-success-700',
-            tone === 'watch' && 'text-warning-700',
-            tone === 'neutral' && 'text-neutral-900'
-          )}
-        >
-          {value}
-        </span>
-        {unit && <span className="text-sm text-neutral-500">{unit}</span>}
-      </p>
-      {note && <p className="mt-1 text-xs text-neutral-500">{note}</p>}
+    <div
+      className="card-base p-4"
+      style={{ borderTop: `2px solid ${toneBorder[tone]}` }}
+    >
+      <p className="metric-label mb-2">{label}</p>
+      <div className="flex items-baseline gap-1.5">
+        <span className="metric-val" style={{ color: toneColor[tone] }}>{value}</span>
+        {unit && <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{unit}</span>}
+      </div>
+      {note && <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{note}</p>}
     </div>
   );
 }

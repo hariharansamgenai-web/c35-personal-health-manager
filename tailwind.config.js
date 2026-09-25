@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -82,6 +83,31 @@ export default {
           900: '#7f1d1d',
           950: '#450a0a',
         },
+
+        navy: {
+          50:  '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
+          925: '#1e1a6e',
+          950: '#0a0d14',
+        },
+        surface: {
+          DEFAULT: '#ffffff',
+          dark:    '#0a0d14',
+          card:    '#f8fafc',
+          'card-dark': '#0d1117',
+          sidebar: '#ffffff',
+          'sidebar-dark': '#060810',
+          border:  '#e4e4e7',
+          'border-dark': '#1e2433',
+        },
         neutral: {
           50: '#fafafa',
           100: '#f4f4f5',
@@ -97,7 +123,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Manrope', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       fontSize: {

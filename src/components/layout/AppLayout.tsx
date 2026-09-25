@@ -11,9 +11,9 @@ export function AppLayout() {
   const viewingOther = activeProfile && selfProfile && activeProfile.id !== selfProfile.id;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-50">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-page)' }}>
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r border-neutral-200 bg-white lg:block">
+      <aside className="hidden w-64 shrink-0 lg:block layout-sidebar">
         <Sidebar />
       </aside>
 
@@ -21,10 +21,10 @@ export function AppLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
-            className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm animate-fade-in"
+            className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute left-0 top-0 h-full w-64 border-r border-neutral-200 bg-white animate-slide-in-right">
+          <aside className="absolute left-0 top-0 h-full w-64 layout-sidebar animate-slide-in-right">
             <Sidebar onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -36,20 +36,21 @@ export function AppLayout() {
         <main className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
           <div className="mx-auto max-w-6xl">
             {viewingOther && (
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-2 text-sm text-secondary-900">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg px-4 py-2 text-sm"
+                style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--text-primary)' }}>
                 <span>
                   Showing records for <strong>{activeProfile.display_name}</strong> (
                   {RELATIONSHIP_LABELS[activeProfile.relationship]})
                 </span>
                 <button
                   onClick={() => setActiveProfileId(selfProfile.id)}
-                  className="font-medium text-secondary-800 underline hover:text-secondary-950"
+                  className="font-medium underline"
+                  style={{ color: 'var(--accent)' }}
                 >
                   Back to my records
                 </button>
               </div>
             )}
-            {/* Remount the page when the profile changes so no data from the previous profile lingers. */}
             <Outlet key={activeProfile?.id ?? 'none'} />
           </div>
         </main>
