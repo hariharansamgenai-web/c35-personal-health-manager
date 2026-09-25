@@ -18,6 +18,7 @@ const pageTitles: Record<string, string> = {
   '/family': 'Family Profiles',
   '/profile': 'Profile',
   '/ai-summary': 'AI Health Summary',
+  '/wearables': 'Wearables & Devices',
 };
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {

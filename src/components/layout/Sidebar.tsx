@@ -11,8 +11,7 @@ import {
   Users,
   User,
   Sparkles,
-  Activity,
-} from 'lucide-react';
+  Activity, Watch} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -26,6 +25,7 @@ const navItems = [
   { to: '/sharing', label: 'Sharing', icon: Share2 },
   { to: '/family', label: 'Family', icon: Users },
   { to: '/ai-summary', label: 'AI Summary', icon: Sparkles },
+  { to: '/wearables', label: 'Wearables', icon: Watch },
 ];
 
 const accountItems = [

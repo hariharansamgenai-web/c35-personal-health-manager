@@ -17,6 +17,7 @@ import { SharingPage } from '@/pages/Sharing';
 import { FamilyPage } from '@/pages/Family';
 import { ProfilePage } from '@/pages/Profile';
 import { AISummaryPage } from '@/pages/AISummary';
+import { WearablesPage } from '@/pages/Wearables';
 import { NotFoundPage } from '@/pages/NotFound';
 
 const router = createBrowserRouter([
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
       { path: '/family', element: <FamilyPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/ai-summary', element: <AISummaryPage /> },
+      { path: '/wearables', element: <WearablesPage /> },
     ],
   },
   {

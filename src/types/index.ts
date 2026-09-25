@@ -71,7 +71,12 @@ export type SharePermission = 'read' | 'write';
 
 export type ShareResourceType = 'all' | 'documents' | 'timeline' | 'check_ins' | 'goals';
 
-export type DeviceType = 'apple_health' | 'google_fit' | 'fitbit' | 'garmin' | 'other';
+export type DeviceType = 'apple_health' | 'google_fit' | 'fitbit' | 'garmin' | 'samsung_health' | 'other';
+
+export type ConnectionStatus = 'disconnected' | 'connected' | 'syncing' | 'error';
+
+/** Provenance of a health row — null means manually entered by the user. */
+export type SyncSource = 'apple_health' | 'google_fit' | 'fitbit' | 'garmin' | 'samsung_health' | 'other' | null;
 
 export type AuditAction =
   | 'document_upload'
@@ -318,6 +323,10 @@ export interface Device {
   device_type: DeviceType;
   device_name: string | null;
   sync_enabled: boolean;
+  connection_status: ConnectionStatus;
+  error_message: string | null;
+  provider_account_id: string | null;
+  scopes: string[] | null;
   last_synced_at: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
