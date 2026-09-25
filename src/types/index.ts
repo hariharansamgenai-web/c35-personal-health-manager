@@ -65,7 +65,7 @@ export type AchievementCategory =
   | 'goal'
   | 'other';
 
-export type ShareStatus = 'pending' | 'active' | 'revoked';
+export type ShareStatus = 'pending' | 'active' | 'revoked' | 'expired';
 
 export type SharePermission = 'read' | 'write';
 
@@ -78,7 +78,9 @@ export type AuditAction =
   | 'document_download'
   | 'document_delete'
   | 'share_created'
+  | 'share_accessed'
   | 'share_revoked'
+  | 'share_expired'
   | 'data_export';
 
 // ── Table row types ──────────────────────────────────────────────────
@@ -288,10 +290,26 @@ export interface MedicalShare {
   resource_type: ShareResourceType;
   permissions: SharePermission[];
   share_token: string;
+  /** Human-friendly label for the share, e.g. "For Dr. Priya – HbA1c". */
+  label: string | null;
   expires_at: string | null;
   status: ShareStatus;
+  access_count: number;
+  last_accessed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShareDocument {
+  id: string;
+  share_id: string;
+  document_id: string;
+  created_at: string;
+}
+
+/** A share with its associated document IDs joined. */
+export interface MedicalShareWithDocuments extends MedicalShare {
+  share_documents: ShareDocument[];
 }
 
 export interface Device {
