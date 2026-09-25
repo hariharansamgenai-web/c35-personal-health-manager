@@ -212,10 +212,17 @@ export interface Food {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  fiber_g: number | null;
   serving_size_g: number | null;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export type FoodInput = Pick<
+  Food,
+  'name' | 'calories_per_100g' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g' | 'serving_size_g' | 'is_favorite'
+>;
 
 export interface Meal {
   id: string;
@@ -233,6 +240,15 @@ export interface FoodLog {
   food_id: string;
   quantity_g: number;
   created_at: string;
+  /** Joined from foods table at query time. */
+  food?: Food;
+}
+
+export type FoodLogInput = Pick<FoodLog, 'food_id' | 'quantity_g'>;
+
+/** A meal with its food logs joined. */
+export interface MealWithLogs extends Meal {
+  food_logs: FoodLog[];
 }
 
 export interface MedicalDocument {
