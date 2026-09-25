@@ -30,7 +30,7 @@ export function StatTile({ label, value, unit, tone = 'neutral', note }: StatTil
     >
       <p className="metric-label mb-2">{label}</p>
       <div className="flex items-baseline gap-1.5">
-        <span className="metric-val" style={{ color: toneColor[tone] }}>{value}</span>
+        <span className={`metric-val${tone === 'good' ? ' metric-val-good' : ''}`} style={{ color: toneColor[tone] }}>{value}</span>
         {unit && <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{unit}</span>}
       </div>
       {note && <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>{note}</p>}

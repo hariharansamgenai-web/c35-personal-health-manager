@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Activity, Award, CheckCircle2, Database, Droplet, FileText,
+  Activity, Award, Database, Droplet, FileText,
   HeartPulse, Moon, Sparkles, Target, TrendingDown, TrendingUp,
 } from 'lucide-react';
 import { useActiveProfile } from '@/context/ActiveProfileContext';
@@ -104,8 +104,8 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header row */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      {/* Header row — dash-hero gives animated gradient bg */}
+      <div className="dash-hero flex flex-wrap items-end justify-between gap-4 rounded-2xl px-5 py-4 -mx-1" style={{ border: '1px solid var(--border)' }}>
         <Heading name={name} todayLogged={!!todayEntry} />
         {todayEntry ? (
           <Link
@@ -113,7 +113,7 @@ export function DashboardPage() {
             className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold"
             style={{ background: 'var(--good-bg)', color: 'var(--good-text)' }}
           >
-            <CheckCircle2 className="h-4 w-4" />
+            <span className="status-dot" style={{ background: "var(--good)", marginRight: 2 }} />
             Today is logged · Edit
           </Link>
         ) : (
