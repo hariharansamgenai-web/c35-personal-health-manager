@@ -44,12 +44,18 @@ export type GoalCategory =
 export type GoalStatus = 'active' | 'completed' | 'abandoned';
 
 export type DocumentCategory =
+  | 'lab_report'
+  | 'prescription'
+  | 'scan'
+  | 'doctor_note'
+  | 'discharge_summary'
+  | 'other'
+  // Legacy values kept for backward compatibility
   | 'lab_results'
   | 'imaging'
   | 'prescriptions'
   | 'visit_notes'
-  | 'insurance'
-  | 'other';
+  | 'insurance';
 
 export type AchievementCategory =
   | 'exercise'
@@ -259,11 +265,21 @@ export interface MedicalDocument {
   mime_type: string;
   file_size: number;
   category: DocumentCategory;
+  document_name: string | null;
+  document_date: string | null;
+  doctor: string | null;
+  hospital_clinic: string | null;
+  notes: string | null;
   description: string | null;
   uploaded_at: string;
   created_at: string;
   updated_at: string;
 }
+
+export type MedicalDocumentInput = Pick<
+  MedicalDocument,
+  'category' | 'document_name' | 'document_date' | 'doctor' | 'hospital_clinic' | 'notes'
+>;
 
 export interface MedicalShare {
   id: string;
