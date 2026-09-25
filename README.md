@@ -129,3 +129,11 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture plan 
 - Medical documents stored in private Supabase Storage buckets
 - OpenAI API key never exposed to the browser — only used in Edge Functions
 - No secrets hard-coded in the codebase
+
+## Phase 4 — Family profiles
+
+- Migration `supabase/migrations/20260925150000_0008_family_profiles.sql`:
+  - **Fixes RLS on all health tables** (restores `EXECUTE` on `user_owns_profile` for `authenticated`; without it every health-table query fails with *permission denied*).
+  - Adds `height_cm`, `weight_kg`, relationships `mother` / `father`, one `self` profile per account, self profile can't be deleted, private `avatars` storage bucket.
+- The active profile lives in `ActiveProfileContext` (`useActiveProfile()`). Every health page must read `activeProfile.id` and filter by `profile_id`. Pages remount on profile switch, so no data from the previous profile lingers.
+- Isolation tests: run `supabase/tests/profile_isolation.sql` in the SQL Editor. It creates two throwaway users, runs 16 checks, prints `PASS …`, and rolls everything back.

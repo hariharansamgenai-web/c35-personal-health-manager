@@ -37,7 +37,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 !m-0 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}

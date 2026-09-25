@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { Avatar } from '@/components/ui/Avatar';
+import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
+import { ProfileSwitcher } from '@/components/profile/ProfileSwitcher';
+import { useActiveProfile } from '@/context/ActiveProfileContext';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -20,6 +22,7 @@ const pageTitles: Record<string, string> = {
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const { user, profile, signOut } = useAuth();
+  const { selfProfile } = useActiveProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -52,20 +55,27 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <h1 className="text-lg font-semibold text-neutral-900">{title}</h1>
       </div>
 
+      <div className="flex items-center gap-2">
+      <ProfileSwitcher />
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-2 rounded-lg p-1.5 pr-2 hover:bg-neutral-100"
+          aria-label="Account menu"
+          aria-expanded={menuOpen}
+          className="flex items-center gap-1 rounded-lg p-1.5 hover:bg-neutral-100"
         >
-          <Avatar name={displayName} size="sm" />
-          <span className="hidden text-sm font-medium text-neutral-700 sm:block">
-            {displayName}
-          </span>
+          <ProfileAvatar
+            profile={{ display_name: displayName, avatar_url: selfProfile?.avatar_url ?? null }}
+            size="sm"
+          />
           <ChevronDown className="h-4 w-4 text-neutral-400" />
         </button>
 
         {menuOpen && (
           <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg animate-fade-in">
+            <p className="truncate border-b border-neutral-100 px-4 py-2 text-xs text-neutral-500">
+              {user?.email}
+            </p>
             <button
               onClick={() => {
                 setMenuOpen(false);
@@ -87,6 +97,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
             </button>
           </div>
         )}
+      </div>
       </div>
     </header>
   );

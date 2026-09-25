@@ -5,7 +5,15 @@
 
 export type Sex = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
-export type Relationship = 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+export type Relationship =
+  | 'self'
+  | 'spouse'
+  | 'mother'
+  | 'father'
+  | 'parent'
+  | 'child'
+  | 'sibling'
+  | 'other';
 
 export type Mood = 'great' | 'good' | 'okay' | 'low' | 'poor';
 
@@ -15,8 +23,10 @@ export type ActivityType =
   | 'cycling'
   | 'swimming'
   | 'strength'
+  | 'gym'
   | 'yoga'
   | 'sports'
+  | 'custom'
   | 'other';
 
 export type ExerciseIntensity = 'low' | 'moderate' | 'high';
@@ -74,10 +84,20 @@ export interface Profile {
   relationship: Relationship;
   date_of_birth: string | null;
   sex: Sex | null;
+  /** Storage path in the private `avatars` bucket (not a public URL). */
   avatar_url: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
   created_at: string;
   updated_at: string;
 }
+
+export type ProfileInput = Pick<
+  Profile,
+  'display_name' | 'relationship' | 'date_of_birth' | 'sex' | 'height_cm' | 'weight_kg'
+>;
+
+export type GoalFrequency = 'daily' | 'weekly';
 
 export interface Goal {
   id: string;
@@ -85,19 +105,33 @@ export interface Goal {
   title: string;
   category: GoalCategory;
   target_value: number | null;
+  /** Stored by the database; the app never reads or writes this — progress is always computed live. */
   current_value: number | null;
   unit: string | null;
+  frequency: GoalFrequency;
+  start_date: string;
   status: GoalStatus;
+  /** "End date" in the UI. */
   target_date: string | null;
+  reminder_enabled: boolean;
+  reminder_time: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type GoalInput = Pick<
+  Goal,
+  'title' | 'category' | 'target_value' | 'unit' | 'frequency' | 'start_date' | 'target_date' | 'reminder_enabled' | 'reminder_time'
+>;
 
 export interface Activity {
   id: string;
   profile_id: string;
   date: string;
+  start_time: string | null;
   activity_type: ActivityType;
+  /** The user's own name for the activity; required when activity_type = 'custom'. */
+  custom_label: string | null;
   duration_min: number;
   intensity: ExerciseIntensity | null;
   calories_burned: number | null;
@@ -107,6 +141,11 @@ export interface Activity {
   updated_at: string;
 }
 
+export type ActivityInput = Pick<
+  Activity,
+  'date' | 'start_time' | 'activity_type' | 'custom_label' | 'duration_min' | 'intensity' | 'calories_burned' | 'distance_km' | 'notes'
+>;
+
 export interface DailyCheckIn {
   id: string;
   profile_id: string;
@@ -114,10 +153,45 @@ export interface DailyCheckIn {
   mood: Mood | null;
   energy_level: number | null;
   sleep_hours: number | null;
+  sleep_quality: number | null;
   stress_level: number | null;
+  weight_kg: number | null;
+  water_ml: number | null;
+  meds_taken: boolean | null;
+  glucose_fasting: number | null;
+  glucose_post_meal: number | null;
+  steps: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Fields the daily check-in form writes. */
+export type CheckInInput = Pick<
+  DailyCheckIn,
+  | 'date'
+  | 'mood'
+  | 'energy_level'
+  | 'sleep_hours'
+  | 'sleep_quality'
+  | 'weight_kg'
+  | 'water_ml'
+  | 'meds_taken'
+  | 'glucose_fasting'
+  | 'glucose_post_meal'
+  | 'steps'
+  | 'notes'
+>;
+
+export type AlertSeverity = 'critical' | 'warning';
+
+export interface HealthAlert {
+  id: string;
+  severity: AlertSeverity;
+  title: string;
+  detail: string;
+  action: string;
+  date: string;
 }
 
 export interface Achievement {

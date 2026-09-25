@@ -37,6 +37,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .from('profiles')
     .select('*')
     .eq('owner_id', userId)
+    .eq('relationship', 'self')
     .maybeSingle();
 
   if (error) {
@@ -70,10 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        (async () => {
-          const p = await fetchProfile(newSession.user.id);
-          setProfile(p);
-        })();
+        // Defer Supabase calls out of the auth callback to avoid a known client deadlock.
+        const userId = newSession.user.id;
+        setTimeout(() => {
+          fetchProfile(userId).then(setProfile);
+        }, 0);
       } else {
         setProfile(null);
       }
