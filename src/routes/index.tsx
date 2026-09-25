@@ -1,8 +1,11 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
+import { PublicRoute } from '@/routes/PublicRoute';
 import { LoginPage } from '@/pages/auth/Login';
 import { RegisterPage } from '@/pages/auth/Register';
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword';
+import { ResetPasswordPage } from '@/pages/auth/ResetPassword';
 import { DashboardPage } from '@/pages/Dashboard';
 import { CheckInsPage } from '@/pages/CheckIns';
 import { ExercisePage } from '@/pages/Exercise';
@@ -19,11 +22,31 @@ import { NotFoundPage } from '@/pages/NotFound';
 const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: (
+      <PublicRoute>
+        <LoginPage />
+      </PublicRoute>
+    ),
   },
   {
     path: '/register',
-    element: <RegisterPage />,
+    element: (
+      <PublicRoute>
+        <RegisterPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: '/forgot-password',
+    element: (
+      <PublicRoute>
+        <ForgotPasswordPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     element: (

@@ -19,7 +19,7 @@ const pageTitles: Record<string, string> = {
 };
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,7 +37,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const displayName = user?.email?.split('@')[0] ?? 'User';
+  const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? 'User';
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-neutral-200 bg-white px-4 lg:px-6">
