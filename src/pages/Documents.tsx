@@ -325,7 +325,7 @@ export function DocumentsPage() {
                         <Btn label="Preview" loading={actionLoading===doc.id} onClick={()=>openPreview(doc)}><ExternalLink style={{ width:14,height:14 }}/></Btn>
                         <Btn label="Download" loading={actionLoading===doc.id+'-dl'} onClick={()=>handleDownload(doc)}><Download style={{ width:14,height:14 }}/></Btn>
                         <Btn label="Edit" onClick={()=>setEditDoc(doc)}><Pencil style={{ width:14,height:14 }}/></Btn>
-                        <Btn label={isPinned?'Unpin from emergency':'Pin to emergency'} onClick={()=>setPinned(p=>{ const n=new Set(p); isPinned?n.delete(doc.id):n.add(doc.id); return n; })}
+                        <Btn label={isPinned?'Unpin from emergency':'Pin to emergency'} onClick={()=>setPinned(p=>{ const n=new Set(p); if(isPinned){n.delete(doc.id);}else{n.add(doc.id);} return n; })}
                           style={{ color:isPinned?'#ef4444':'var(--text-muted)' }}>
                           <Star style={{ width:14,height:14,fill:isPinned?'#ef4444':'none' }}/>
                         </Btn>
