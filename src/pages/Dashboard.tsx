@@ -221,8 +221,35 @@ export function DashboardPage() {
   const highStress  = todayStress !== null && todayStress >= 7;
   const avgStress   = week.length > 0 ? week.reduce((s,c)=>s+(c.stress_level??0),0)/week.filter(c=>c.stress_level!==null).length : 0;
   const burnoutRisk = avgStress >= 6;
-  // ── Screen time proxy (sleep < 6h + stress >= 6 = likely screen issue) ───
-  const screenWarning = todaySleep !== null && todaySleep < 6 && (todayStress ?? 0) >= 5;
+  // ── Screen time score (0 = none, 10 = excessive) ──────────────────────────
+  // Signals: short sleep, high stress, poor sleep quality, late energy, bad mood
+  function screenTimeScore(sleep: number | null, stress: number | null, sleepQ: number | null, energy: number | null, mood: string | null): number {
+    let score = 0;
+    if (sleep !== null) {
+      if (sleep < 5)   score += 3.5;
+      else if (sleep < 6) score += 2.5;
+      else if (sleep < 7) score += 1;
+    }
+    if (stress !== null) {
+      if (stress >= 8) score += 3;
+      else if (stress >= 6) score += 2;
+      else if (stress >= 4) score += 0.5;
+    }
+    if (sleepQ !== null && sleepQ <= 2) score += 1.5;
+    if (energy !== null && energy <= 3)  score += 1;
+    if (mood === 'bad' || mood === 'terrible') score += 1;
+    return Math.min(10, Math.round(score * 10) / 10);
+  }
+  const todayScreenScore = screenTimeScore(todaySleep, todayStress, todayEntry?.sleep_quality ?? null, todayEntry?.energy_level ?? null, todayEntry?.mood ?? null);
+  const weekScreenScores = week.map(c => ({
+    date: c.date,
+    score: screenTimeScore(c.sleep_hours, c.stress_level, c.sleep_quality ?? null, c.energy_level ?? null, c.mood ?? null),
+  }));
+  const avgScreenScore = weekScreenScores.length > 0 ? weekScreenScores.reduce((s,c)=>s+c.score,0)/weekScreenScores.length : 0;
+  const screenWarning = todayScreenScore >= 5;
+  const screenLevel = todayScreenScore >= 7 ? 'high' : todayScreenScore >= 4 ? 'moderate' : 'low';
+  const screenColor = screenLevel === 'high' ? '#ef4444' : screenLevel === 'moderate' ? '#f59e0b' : '#10b981';
+  const screenHasData = todayEntry !== null && (todaySleep !== null || todayStress !== null);
   // ── Wearable sync ─────────────────────────────────────────────────────────
   const noStepsLogged = todaySteps === null && todayEntry !== null;
 
@@ -392,16 +419,102 @@ export function DashboardPage() {
               )}
             </div>
 
-            {/* Screen time warning */}
-            <ActionCard
-              icon={<Laptop style={{ width:18,height:18,color:screenWarning?'#f59e0b':'var(--text-muted)' }}/>}
-              color={screenWarning?'#f59e0b':'var(--text-muted)'}
-              bg={screenWarning?'rgba(245,158,11,.05)':'transparent'}
-              title={screenWarning?'High screen time likely':'Screen time tracking'}
-              subtitle={screenWarning?'Short sleep + high stress often signals late-night screens. Try a digital wind-down by 10PM.':'Log sleep and stress to detect excessive screen time patterns.'}
-              action={()=>navigate('/check-ins')}
-              actionLabel="Log check-in"
-            />
+            {/* Screen time tracker — functional */}
+            <div style={{ padding:'14px 16px',borderRadius:14,background:screenHasData?`${screenColor}08`:'var(--bg-card-2,var(--bg-card))',border:`1px solid ${screenHasData?`${screenColor}30`:'var(--border)'}` }}>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
+                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                  <Laptop style={{ width:16,height:16,color:screenHasData?screenColor:'var(--text-muted)' }}/>
+                  <p style={{ fontSize:13,fontWeight:700,color:'var(--text-primary)' }}>Screen time exposure</p>
+                </div>
+                {screenHasData && (
+                  <div style={{ textAlign:'right' }}>
+                    <span style={{ fontSize:22,fontWeight:900,color:screenColor,letterSpacing:'-.03em' }}>{todayScreenScore.toFixed(1)}</span>
+                    <span style={{ fontSize:11,color:'var(--text-muted)',marginLeft:2 }}>/10</span>
+                  </div>
+                )}
+              </div>
+
+              {!screenHasData ? (
+                <div>
+                  <p style={{ fontSize:12,color:'var(--text-muted)',marginBottom:10 }}>Log sleep duration and stress level in today's check-in to calculate your screen exposure risk.</p>
+                  <button onClick={()=>navigate('/check-ins')} style={{ padding:'7px 14px',borderRadius:8,border:'none',background:'var(--accent)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer' }}>
+                    Log check-in now →
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Score bar */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ height:8,borderRadius:4,background:'var(--border)',overflow:'hidden' }}>
+                      <div style={{ height:'100%',borderRadius:4,width:`${(todayScreenScore/10)*100}%`,background:`linear-gradient(90deg,#10b981,${todayScreenScore>5?'#f59e0b':'#10b981'},${todayScreenScore>7?'#ef4444':'transparent'})`,transition:'width .6s ease' }}/>
+                    </div>
+                    <div style={{ display:'flex',justifyContent:'space-between',marginTop:4 }}>
+                      <span style={{ fontSize:9,color:'var(--text-muted)' }}>Low</span>
+                      <span style={{ fontSize:9,color:'var(--text-muted)' }}>Moderate</span>
+                      <span style={{ fontSize:9,color:'var(--text-muted)' }}>High</span>
+                    </div>
+                  </div>
+
+                  {/* 7-day mini bars */}
+                  {weekScreenScores.length > 0 && (
+                    <div style={{ marginBottom:10 }}>
+                      <p style={{ fontSize:10,fontWeight:600,color:'var(--text-muted)',marginBottom:6 }}>7-DAY PATTERN</p>
+                      <div style={{ display:'flex',gap:4,alignItems:'flex-end',height:32 }}>
+                        {days.map(day => {
+                          const d = weekScreenScores.find(s=>s.date===day);
+                          const sc = d?.score ?? 0;
+                          const barH = Math.max(4, Math.round((sc/10)*32));
+                          const bc = sc>=7?'#ef4444':sc>=4?'#f59e0b':'#10b981';
+                          const isToday = day === today;
+                          const dayL = new Date(day+'T12:00:00').toLocaleDateString('en',{ weekday:'narrow' });
+                          return (
+                            <div key={day} style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3 }}>
+                              <div style={{ width:'100%',borderRadius:3,background:bc,height:barH,opacity:isToday?1:.6,outline:isToday?`2px solid ${bc}`:'none' }}/>
+                              <span style={{ fontSize:9,color:isToday?'var(--text-primary)':'var(--text-muted)',fontWeight:isToday?700:400 }}>{dayL}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status + tips */}
+                  <div style={{ padding:'10px 12px',borderRadius:10,background:`${screenColor}12`,border:`1px solid ${screenColor}25` }}>
+                    <p style={{ fontSize:12,fontWeight:700,color:screenColor,marginBottom:6 }}>
+                      {screenLevel==='high'?'🔴 High screen exposure detected':screenLevel==='moderate'?'🟡 Moderate screen exposure':'🟢 Screen time looks healthy'}
+                    </p>
+                    {screenLevel==='high' && (
+                      <ul style={{ margin:0,padding:0,listStyle:'none',display:'flex',flexDirection:'column',gap:4 }}>
+                        {[
+                          todaySleep!==null&&todaySleep<6?`🛌 Sleep was only ${todaySleep.toFixed(1)}h — screens likely displaced rest time`:null,
+                          todayStress!==null&&todayStress>=6?`😰 Stress at ${todayStress}/10 — scrolling often increases cortisol`:null,
+                          '📵 Try screen-free 1hr before bed',
+                          '⏱ Set app timers for social media',
+                        ].filter(Boolean).map((tip,i)=><li key={i} style={{ fontSize:11,color:'var(--text-secondary)' }}>{tip}</li>)}
+                      </ul>
+                    )}
+                    {screenLevel==='moderate' && (
+                      <ul style={{ margin:0,padding:0,listStyle:'none',display:'flex',flexDirection:'column',gap:4 }}>
+                        {[
+                          '🌙 Wind down screens by 9:30 PM',
+                          '☀️ Get 10 min of morning sunlight to reset sleep rhythm',
+                          todayStress!==null&&todayStress>=4?`🧘 Stress at ${todayStress}/10 — try a 5-min breathing break`:null,
+                        ].filter(Boolean).map((tip,i)=><li key={i} style={{ fontSize:11,color:'var(--text-secondary)' }}>{tip}</li>)}
+                      </ul>
+                    )}
+                    {screenLevel==='low' && (
+                      <p style={{ fontSize:11,color:'var(--text-secondary)' }}>
+                        {avgScreenScore>4?`This is better than your 7-day avg (${avgScreenScore.toFixed(1)}/10). Keep it up!`:'Your sleep and stress patterns suggest healthy screen habits today.'}
+                      </p>
+                    )}
+                  </div>
+
+                  <button onClick={()=>navigate('/check-ins')} style={{ marginTop:10,fontSize:11,fontWeight:600,color:'var(--accent)',background:'none',border:'none',cursor:'pointer',padding:0,display:'flex',alignItems:'center',gap:4 }}>
+                    Update today's data <ChevronRight style={{ width:11,height:11 }}/>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
