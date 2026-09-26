@@ -39,6 +39,7 @@ export function AIFoodAnalyser({ onUse }: Props) {
   const [imagePreview, setImagePreview]   = useState<string | null>(null);
   const [detection, setDetection]         = useState<CameraDetection>('none');
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
+  const [manualBarcode, setManualBarcode]     = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Results
@@ -85,14 +86,13 @@ export function AIFoodAnalyser({ onUse }: Props) {
     setLoading(true); setError(null); setResult(null); setBarcodeResult(null); setAddedIdx(null);
     try {
       if (mode === 'camera') {
-        if (!imageFile) { setError('Tap the camera button to take a photo first.'); setLoading(false); return; }
-
+        // Barcode path — from camera detection OR manual entry
         if (detection === 'barcode' && detectedBarcode) {
-          // Barcode path
           const br = await lookupBarcode(detectedBarcode);
           setBarcodeResult(br);
         } else {
           // Food photo path
+          if (!imageFile) { setError('Tap the camera button to take a food photo first.'); setLoading(false); return; }
           const b64 = await fileToBase64(imageFile);
           const mime = imageFile.type === 'image/png' ? 'image/png' : 'image/jpeg';
           const res = await analyseFoodImage(b64, mime, isVeg, saltLevel, oilLevel);
@@ -212,7 +212,7 @@ export function AIFoodAnalyser({ onUse }: Props) {
               { id: 'camera', icon: Camera, label: 'Camera (food + barcode)' },
             ] as const).map(m => (
               <button key={m.id}
-                onClick={() => { setMode(m.id); setResult(null); setBarcodeResult(null); setError(null); setDetection('none'); setImageFile(null); setImagePreview(null); setDetectedBarcode(null); }}
+                onClick={() => { setMode(m.id); setResult(null); setBarcodeResult(null); setError(null); setDetection('none'); setImageFile(null); setImagePreview(null); setDetectedBarcode(null); setManualBarcode(''); }}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all"
                 style={{ background: mode === m.id ? 'var(--accent-bg)' : 'transparent', color: mode === m.id ? 'var(--accent)' : 'var(--text-muted)', border: `1px solid ${mode === m.id ? 'var(--accent-border)' : 'var(--border)'}` }}>
                 <m.icon className="h-3.5 w-3.5" />
@@ -313,6 +313,61 @@ export function AIFoodAnalyser({ onUse }: Props) {
                   </div>
                 </div>
               )}
+
+              {/* ── Manual barcode entry ── */}
+              <div className="space-y-2">
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                    or enter barcode manually
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={manualBarcode}
+                    onChange={e => {
+                      const v = e.target.value.replace(/\D/g, '');
+                      setManualBarcode(v);
+                      if (v.length >= 8) {
+                        setDetectedBarcode(v);
+                        setDetection('barcode');
+                      } else if (detection === 'barcode' && !imageFile) {
+                        setDetection('none');
+                        setDetectedBarcode(null);
+                      }
+                    }}
+                    placeholder="e.g. 8901030925763"
+                    maxLength={14}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: 8, fontSize: 14,
+                      border: `1px solid ${manualBarcode.length >= 8 ? 'var(--accent)' : 'var(--border)'}`,
+                      background: 'var(--bg-input)', color: 'var(--text-primary)', outline: 'none',
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && manualBarcode.length >= 8 && handleAnalyse()}
+                  />
+                  {manualBarcode.length >= 8 && (
+                    <button
+                      onClick={handleAnalyse}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold shrink-0 transition-all"
+                      style={{ background: 'var(--accent)', color: '#fff', border: 'none', opacity: loading ? .6 : 1 }}
+                    >
+                      <Barcode className="h-3.5 w-3.5" />
+                      Look up
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Indian barcodes start with 890 · Covers Amul, Britannia, Parle, Haldiram's, Tata & 3M+ products
+                </p>
+              </div>
             </div>
           )}
 
@@ -350,7 +405,7 @@ export function AIFoodAnalyser({ onUse }: Props) {
 
           {/* ── Analyse button ── */}
           <Button onClick={handleAnalyse} loading={loading} className="w-full"
-            disabled={loading || (mode === 'camera' && detection === 'none')}>
+            disabled={loading || (mode === 'camera' && detection === 'none' && manualBarcode.length < 8)}>
             {loading
               ? <><Loader2 className="h-4 w-4 animate-spin" />{detection === 'barcode' ? 'Looking up barcode…' : 'Identifying food with Gemini…'}</>
               : <><Sparkles className="h-4 w-4" />{analyseLabel()}</>}
