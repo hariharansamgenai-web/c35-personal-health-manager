@@ -68,40 +68,50 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl"
-            style={{ background: '#000', boxShadow: '0 0 32px rgba(139,92,246,.4), 0 0 32px rgba(251,146,60,.3), 0 6px 20px rgba(0,0,0,.6)' }}>
-            <svg width="56" height="52" viewBox="0 0 30 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Large heart logo — matches reference */}
+          <div style={{ width:120, height:120, borderRadius:28, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'0 0 48px rgba(139,92,246,.5), 0 0 48px rgba(251,146,60,.4), 0 8px 32px rgba(0,0,0,.8)' }}>
+            <svg width="90" height="84" viewBox="0 0 60 56" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <radialGradient id="lg2" cx="35%" cy="30%" r="70%">
-                  <stop offset="0%"   stopColor="#7c3aed"/>
-                  <stop offset="60%"  stopColor="#4f46e5"/>
-                  <stop offset="100%" stopColor="#2563eb"/>
+                <radialGradient id="lg3" cx="38%" cy="28%" r="65%">
+                  <stop offset="0%"   stopColor="#8b5cf6"/>
+                  <stop offset="35%"  stopColor="#6d28d9"/>
+                  <stop offset="70%"  stopColor="#4338ca"/>
+                  <stop offset="100%" stopColor="#1e3a8a"/>
                 </radialGradient>
-                <radialGradient id="rg2" cx="65%" cy="25%" r="70%">
-                  <stop offset="0%"   stopColor="#fde68a"/>
-                  <stop offset="40%"  stopColor="#f59e0b"/>
-                  <stop offset="100%" stopColor="#ea580c"/>
+                <radialGradient id="rg3" cx="62%" cy="22%" r="68%">
+                  <stop offset="0%"   stopColor="#fef08a"/>
+                  <stop offset="30%"  stopColor="#fbbf24"/>
+                  <stop offset="65%"  stopColor="#f97316"/>
+                  <stop offset="100%" stopColor="#c2410c"/>
                 </radialGradient>
-                <radialGradient id="mg2" cx="50%" cy="45%" r="60%">
-                  <stop offset="0%"  stopColor="#c026d3" stopOpacity="0.9"/>
-                  <stop offset="50%" stopColor="#9333ea" stopOpacity="0.7"/>
-                  <stop offset="100%" stopColor="#7c2d12" stopOpacity="0.5"/>
+                <radialGradient id="mg3" cx="50%" cy="55%" r="70%">
+                  <stop offset="0%"   stopColor="#db2777" stopOpacity="0.95"/>
+                  <stop offset="40%"  stopColor="#9333ea" stopOpacity="0.85"/>
+                  <stop offset="80%"  stopColor="#581c87" stopOpacity="0.75"/>
+                  <stop offset="100%" stopColor="#1c0533" stopOpacity="0.6"/>
                 </radialGradient>
-                <clipPath id="lc2">
-                  <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11,3 13.5,4.5 15,7 L15,24 Z"/>
+                <clipPath id="lc3">
+                  <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C22,6 27,9 30,14 L30,48 Z"/>
                 </clipPath>
-                <clipPath id="rc2">
-                  <path d="M15,24 C15,24 28,17 28,9.5 C28,5.5 25,3 21.5,3 C19,3 16.5,4.5 15,7 L15,24 Z"/>
+                <clipPath id="rc3">
+                  <path d="M30,48 C30,48 56,34 56,19 C56,11 50,6 43,6 C38,6 33,9 30,14 L30,48 Z"/>
                 </clipPath>
               </defs>
-              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z" fill="#000"/>
-              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z" fill="url(#lg2)" clipPath="url(#lc2)"/>
-              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z" fill="url(#rg2)" clipPath="url(#rc2)"/>
-              <path d="M15,7 C13.5,9 12,12 12,14 C12,18 13.5,21 15,24 C16.5,21 18,18 18,14 C18,12 16.5,9 15,7 Z" fill="url(#mg2)" opacity="0.85"/>
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="#000"/>
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="url(#lg3)" clipPath="url(#lc3)"/>
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="url(#rg3)" clipPath="url(#rc3)"/>
+              <path d="M30,14 C26,19 23,26 23,31 C23,39 26,44 30,48 C34,44 37,39 37,31 C37,26 34,19 30,14 Z" fill="url(#mg3)" opacity="0.9"/>
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-neutral-900">PulsePath</h1>
-          <p className="mt-1 text-sm text-neutral-500">Sign in to your account</p>
+          {/* Gold gradient wordmark */}
+          <h1 style={{ fontSize:32, fontWeight:900, letterSpacing:'-.04em', lineHeight:1, background:'linear-gradient(135deg, #fde68a 0%, #f59e0b 45%, #d97706 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', marginBottom:4 }}>
+            PulsePath
+          </h1>
+          {/* Gold tagline */}
+          <p style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', background:'linear-gradient(135deg, #fde68a 0%, #f59e0b 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', marginBottom:4 }}>
+            Small habits · Brighter days
+          </p>
+          <p style={{ fontSize:13, color:'#6b7280', marginTop:4 }}>Sign in to your account</p>
         </div>
 
         <div className="card-base space-y-4 p-6">

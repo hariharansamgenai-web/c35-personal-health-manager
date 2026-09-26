@@ -34,66 +34,69 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         marginBottom: '4px',
       }}>
         <div className="flex items-center gap-3">
-          {/* PulsePath — Dual-lobe gradient heart */}
+          {/* PulsePath — Dual-lobe heart, matched to reference */}
           <div style={{
-            width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
             background: '#000',
-            boxShadow: '0 0 20px rgba(139,92,246,.3), 0 0 20px rgba(251,146,60,.25), 0 2px 8px rgba(0,0,0,.7)',
+            boxShadow: '0 0 24px rgba(139,92,246,.45), 0 0 24px rgba(251,146,60,.35), 0 2px 10px rgba(0,0,0,.8)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg width="30" height="28" viewBox="0 0 30 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="32" height="30" viewBox="0 0 60 56" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                {/* Left lobe: purple → blue */}
-                <radialGradient id="lg" cx="35%" cy="30%" r="70%">
-                  <stop offset="0%"   stopColor="#7c3aed"/>
-                  <stop offset="60%"  stopColor="#4f46e5"/>
-                  <stop offset="100%" stopColor="#2563eb"/>
+                {/* Left lobe: vivid indigo-violet, radial highlight top-left */}
+                <radialGradient id="sb-l" cx="38%" cy="28%" r="65%">
+                  <stop offset="0%"   stopColor="#8b5cf6"/>
+                  <stop offset="35%"  stopColor="#6d28d9"/>
+                  <stop offset="70%"  stopColor="#4338ca"/>
+                  <stop offset="100%" stopColor="#1e3a8a"/>
                 </radialGradient>
-                {/* Right lobe: amber → orange */}
-                <radialGradient id="rg" cx="65%" cy="25%" r="70%">
-                  <stop offset="0%"   stopColor="#fde68a"/>
-                  <stop offset="40%"  stopColor="#f59e0b"/>
-                  <stop offset="100%" stopColor="#ea580c"/>
+                {/* Right lobe: gold-amber-orange, radial highlight top-right */}
+                <radialGradient id="sb-r" cx="62%" cy="22%" r="68%">
+                  <stop offset="0%"   stopColor="#fef08a"/>
+                  <stop offset="30%"  stopColor="#fbbf24"/>
+                  <stop offset="65%"  stopColor="#f97316"/>
+                  <stop offset="100%" stopColor="#c2410c"/>
                 </radialGradient>
-                {/* Blend zone: purple-orange mix */}
-                <radialGradient id="mg" cx="50%" cy="45%" r="60%">
-                  <stop offset="0%"  stopColor="#c026d3" stopOpacity="0.9"/>
-                  <stop offset="50%" stopColor="#9333ea" stopOpacity="0.7"/>
-                  <stop offset="100%" stopColor="#7c2d12" stopOpacity="0.5"/>
+                {/* Centre blend: magenta-purple-dark, matches reference intersection */}
+                <radialGradient id="sb-m" cx="50%" cy="55%" r="70%">
+                  <stop offset="0%"   stopColor="#db2777" stopOpacity="0.95"/>
+                  <stop offset="40%"  stopColor="#9333ea" stopOpacity="0.85"/>
+                  <stop offset="80%"  stopColor="#581c87" stopOpacity="0.75"/>
+                  <stop offset="100%" stopColor="#1c0533" stopOpacity="0.6"/>
                 </radialGradient>
-                <clipPath id="lc">
-                  {/* Left lobe clip: left half of heart */}
-                  <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11,3 13.5,4.5 15,7 L15,24 Z"/>
+                <clipPath id="sb-lc">
+                  <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C22,6 27,9 30,14 L30,48 Z"/>
                 </clipPath>
-                <clipPath id="rc">
-                  {/* Right lobe clip: right half of heart */}
-                  <path d="M15,24 C15,24 28,17 28,9.5 C28,5.5 25,3 21.5,3 C19,3 16.5,4.5 15,7 L15,24 Z"/>
+                <clipPath id="sb-rc">
+                  <path d="M30,48 C30,48 56,34 56,19 C56,11 50,6 43,6 C38,6 33,9 30,14 L30,48 Z"/>
                 </clipPath>
               </defs>
-
-              {/* Full heart mask — both lobes together */}
-              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z"
-                fill="#000"/>
-
-              {/* Left lobe — purple/blue */}
-              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z"
-                fill="url(#lg)" clipPath="url(#lc)"/>
-
-              {/* Right lobe — amber/orange */}
-              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z"
-                fill="url(#rg)" clipPath="url(#rc)"/>
-
-              {/* Blend overlay — the intersection leaf shape in the centre */}
-              <path d="M15,7 C13.5,9 12,12 12,14 C12,18 13.5,21 15,24 C16.5,21 18,18 18,14 C18,12 16.5,9 15,7 Z"
-                fill="url(#mg)" opacity="0.85"/>
+              {/* Black base */}
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="#000"/>
+              {/* Left lobe */}
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="url(#sb-l)" clipPath="url(#sb-lc)"/>
+              {/* Right lobe */}
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="url(#sb-r)" clipPath="url(#sb-rc)"/>
+              {/* Centre leaf blend — wider to match reference */}
+              <path d="M30,14 C26,19 23,26 23,31 C23,39 26,44 30,48 C34,44 37,39 37,31 C37,26 34,19 30,14 Z" fill="url(#sb-m)" opacity="0.9"/>
             </svg>
           </div>
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: '-.03em' }}>
+          <div style={{ lineHeight: 1 }}>
+            {/* Gold gradient wordmark */}
+            <p style={{
+              fontSize: 16, fontWeight: 900, lineHeight: 1, letterSpacing: '-.03em',
+              background: 'linear-gradient(135deg, #fde68a 0%, #f59e0b 40%, #d97706 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>
               PulsePath
             </p>
-            <p style={{ fontSize: 9, color: 'rgba(167,139,250,.6)', marginTop: 3, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-              Small habits. Better health.
+            {/* Gold tagline matching reference */}
+            <p style={{
+              fontSize: 8, marginTop: 3, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase',
+              background: 'linear-gradient(135deg, #fde68a 0%, #f59e0b 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>
+              Small habits · Brighter days
             </p>
           </div>
         </div>
