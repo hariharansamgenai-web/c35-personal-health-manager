@@ -35,49 +35,65 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         marginBottom: '4px',
       }}>
         <div className="flex items-center gap-3">
-          {/* PulsePath — Golden Heart logo */}
+          {/* PulsePath — Dual-lobe gradient heart */}
           <div style={{
             width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-            background: 'linear-gradient(145deg,#1a2340,#0e1628)',
-            boxShadow: '0 0 18px rgba(245,158,11,.35), 0 2px 8px rgba(0,0,0,.6)',
+            background: '#000',
+            boxShadow: '0 0 20px rgba(139,92,246,.3), 0 0 20px rgba(251,146,60,.25), 0 2px 8px rgba(0,0,0,.7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="30" height="28" viewBox="0 0 30 28" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#fbbf24"/>
-                  <stop offset="100%" stopColor="#f59e0b"/>
-                </linearGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="1.2" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
+                {/* Left lobe: purple → blue */}
+                <radialGradient id="lg" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%"   stopColor="#7c3aed"/>
+                  <stop offset="60%"  stopColor="#4f46e5"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </radialGradient>
+                {/* Right lobe: amber → orange */}
+                <radialGradient id="rg" cx="65%" cy="25%" r="70%">
+                  <stop offset="0%"   stopColor="#fde68a"/>
+                  <stop offset="40%"  stopColor="#f59e0b"/>
+                  <stop offset="100%" stopColor="#ea580c"/>
+                </radialGradient>
+                {/* Blend zone: purple-orange mix */}
+                <radialGradient id="mg" cx="50%" cy="45%" r="60%">
+                  <stop offset="0%"  stopColor="#c026d3" stopOpacity="0.9"/>
+                  <stop offset="50%" stopColor="#9333ea" stopOpacity="0.7"/>
+                  <stop offset="100%" stopColor="#7c2d12" stopOpacity="0.5"/>
+                </radialGradient>
+                <clipPath id="lc">
+                  {/* Left lobe clip: left half of heart */}
+                  <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11,3 13.5,4.5 15,7 L15,24 Z"/>
+                </clipPath>
+                <clipPath id="rc">
+                  {/* Right lobe clip: right half of heart */}
+                  <path d="M15,24 C15,24 28,17 28,9.5 C28,5.5 25,3 21.5,3 C19,3 16.5,4.5 15,7 L15,24 Z"/>
+                </clipPath>
               </defs>
-              {/* Heart outline — two arcs meeting at bottom point */}
-              <path
-                d="M13,21 C13,21 3,15 3,9 C3,6 5.5,4 8.5,4 C10.5,4 12,5 13,6.5 C14,5 15.5,4 17.5,4 C20.5,4 23,6 23,9 C23,15 13,21 13,21 Z"
-                stroke="url(#hg)" strokeWidth="1.8" fill="none"
-                strokeLinejoin="round" filter="url(#glow)"
-              />
-              {/* Outer glow ring — slightly larger, very faint */}
-              <path
-                d="M13,22 C13,22 1.5,15.5 1.5,8.5 C1.5,5 4.2,2.5 7.8,2.5 C10.2,2.5 12,3.8 13,5.5 C14,3.8 15.8,2.5 18.2,2.5 C21.8,2.5 24.5,5 24.5,8.5 C24.5,15.5 13,22 13,22 Z"
-                stroke="#f59e0b" strokeWidth="0.6" fill="none" opacity="0.25"
-              />
-              {/* ECG line cutting through heart mid-section */}
-              <path
-                d="M4,12.5 L7.5,12.5 L9,9.5 L11,15.5 L12.5,11 L14,12.5 L16,12.5 L17.5,9.5 L19,15.5 L20.5,12.5 L22,12.5"
-                stroke="#fbbf24" strokeWidth="1.5" fill="none"
-                strokeLinecap="round" strokeLinejoin="round"
-                filter="url(#glow)"
-              />
+
+              {/* Full heart mask — both lobes together */}
+              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z"
+                fill="#000"/>
+
+              {/* Left lobe — purple/blue */}
+              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z"
+                fill="url(#lg)" clipPath="url(#lc)"/>
+
+              {/* Right lobe — amber/orange */}
+              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z"
+                fill="url(#rg)" clipPath="url(#rc)"/>
+
+              {/* Blend overlay — the intersection leaf shape in the centre */}
+              <path d="M15,7 C13.5,9 12,12 12,14 C12,18 13.5,21 15,24 C16.5,21 18,18 18,14 C18,12 16.5,9 15,7 Z"
+                fill="url(#mg)" opacity="0.85"/>
             </svg>
           </div>
           <div>
             <p style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: '-.03em' }}>
               PulsePath
             </p>
-            <p style={{ fontSize: 9, color: 'rgba(245,158,11,.5)', marginTop: 3, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 9, color: 'rgba(167,139,250,.6)', marginTop: 3, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
               Small habits. Better health.
             </p>
           </div>

@@ -68,25 +68,36 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{ background: 'linear-gradient(145deg,#1a2340,#0e1628)', boxShadow: '0 0 24px rgba(245,158,11,.4), 0 4px 12px rgba(0,0,0,.5)' }}>
-            <svg width="36" height="36" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl"
+            style={{ background: '#000', boxShadow: '0 0 32px rgba(139,92,246,.4), 0 0 32px rgba(251,146,60,.3), 0 6px 20px rgba(0,0,0,.6)' }}>
+            <svg width="56" height="52" viewBox="0 0 30 28" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#fbbf24"/>
-                  <stop offset="100%" stopColor="#f59e0b"/>
-                </linearGradient>
-                <filter id="glow2">
-                  <feGaussianBlur stdDeviation="1.2" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
+                <radialGradient id="lg2" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%"   stopColor="#7c3aed"/>
+                  <stop offset="60%"  stopColor="#4f46e5"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </radialGradient>
+                <radialGradient id="rg2" cx="65%" cy="25%" r="70%">
+                  <stop offset="0%"   stopColor="#fde68a"/>
+                  <stop offset="40%"  stopColor="#f59e0b"/>
+                  <stop offset="100%" stopColor="#ea580c"/>
+                </radialGradient>
+                <radialGradient id="mg2" cx="50%" cy="45%" r="60%">
+                  <stop offset="0%"  stopColor="#c026d3" stopOpacity="0.9"/>
+                  <stop offset="50%" stopColor="#9333ea" stopOpacity="0.7"/>
+                  <stop offset="100%" stopColor="#7c2d12" stopOpacity="0.5"/>
+                </radialGradient>
+                <clipPath id="lc2">
+                  <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11,3 13.5,4.5 15,7 L15,24 Z"/>
+                </clipPath>
+                <clipPath id="rc2">
+                  <path d="M15,24 C15,24 28,17 28,9.5 C28,5.5 25,3 21.5,3 C19,3 16.5,4.5 15,7 L15,24 Z"/>
+                </clipPath>
               </defs>
-              <path d="M13,21 C13,21 3,15 3,9 C3,6 5.5,4 8.5,4 C10.5,4 12,5 13,6.5 C14,5 15.5,4 17.5,4 C20.5,4 23,6 23,9 C23,15 13,21 13,21 Z"
-                stroke="url(#hg2)" strokeWidth="1.8" fill="none" strokeLinejoin="round" filter="url(#glow2)"/>
-              <path d="M13,22 C13,22 1.5,15.5 1.5,8.5 C1.5,5 4.2,2.5 7.8,2.5 C10.2,2.5 12,3.8 13,5.5 C14,3.8 15.8,2.5 18.2,2.5 C21.8,2.5 24.5,5 24.5,8.5 C24.5,15.5 13,22 13,22 Z"
-                stroke="#f59e0b" strokeWidth="0.6" fill="none" opacity="0.25"/>
-              <path d="M4,12.5 L7.5,12.5 L9,9.5 L11,15.5 L12.5,11 L14,12.5 L16,12.5 L17.5,9.5 L19,15.5 L20.5,12.5 L22,12.5"
-                stroke="#fbbf24" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow2)"/>
+              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z" fill="#000"/>
+              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z" fill="url(#lg2)" clipPath="url(#lc2)"/>
+              <path d="M15,24 C15,24 2,17 2,9.5 C2,5.5 5,3 8.5,3 C11.5,3 13.5,5 15,7 C16.5,5 18.5,3 21.5,3 C25,3 28,5.5 28,9.5 C28,17 15,24 15,24 Z" fill="url(#rg2)" clipPath="url(#rc2)"/>
+              <path d="M15,7 C13.5,9 12,12 12,14 C12,18 13.5,21 15,24 C16.5,21 18,18 18,14 C18,12 16.5,9 15,7 Z" fill="url(#mg2)" opacity="0.85"/>
             </svg>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">PulsePath</h1>
