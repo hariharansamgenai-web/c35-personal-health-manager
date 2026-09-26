@@ -580,39 +580,49 @@ function MacroGrid({ protein, carbs, fat, fiber }: { protein: number; carbs: num
 }
 
 /**
- * Barcode detection — 3-layer strategy:
- * 1. Native BarcodeDetector API (Chrome Android 83+, Samsung Internet)
- * 2. jsQR (QR codes only — limited for EAN-13)
- * 3. Gemini Vision fallback — reads the barcode digits from the image (works for all barcode types)
+ * Barcode detection using ZXing-js (@zxing/library).
  *
- * The Gemini fallback is the most reliable for EAN-13 printed barcodes
- * because jsQR only handles QR codes and BarcodeDetector isn't available in Safari/Firefox.
+ * ZXing reads EAN-13, EAN-8, Code-128, UPC-A, UPC-E, QR and more
+ * from a static image file — no live camera stream needed.
+ * Works in all browsers (Chrome, Safari, Firefox, Samsung Internet).
+ *
+ * Fallback chain:
+ *  1. ZXing BrowserMultiFormatReader — most reliable for EAN-13
+ *  2. Native BarcodeDetector API    — fast path on Chrome Android
+ *  3. Gemini Vision                  — last resort if both above fail
  */
 async function scanBarcodeFromImage(file: File): Promise<string | null> {
-  // ── Layer 1: native BarcodeDetector ────────────────────────────────
+  // ── Layer 1: ZXing (primary — EAN-13, EAN-8, Code-128, QR, all formats) ──
+  try {
+    const { BrowserMultiFormatReader } = await import('@zxing/library');
+    const reader = new BrowserMultiFormatReader();
+    const img = document.createElement('img');
+    const objectUrl = URL.createObjectURL(file);
+    img.src = objectUrl;
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); });
+    const result = await reader.decodeFromImageElement(img);
+    URL.revokeObjectURL(objectUrl);
+    const digits = result.getText().replace(/\D/g, '');
+    if (digits.length >= 8) return digits;
+  } catch { /* barcode not found or ZXing error — try next layer */ }
+
+  // ── Layer 2: native BarcodeDetector (Chrome Android 83+, fast) ────────
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const BD = (window as any).BarcodeDetector;
     if (BD) {
       const bitmap = await createImageBitmap(file);
       const codes: Array<{rawValue: string}> = await new BD({
-        formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'qr_code', 'itf'],
+        formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'qr_code'],
       }).detect(bitmap);
       if (codes.length > 0) {
         const digits = codes[0].rawValue.replace(/\D/g, '');
         if (digits.length >= 8) return digits;
       }
     }
-  } catch { /* not available */ }
+  } catch { /* not available in this browser */ }
 
-  // ── Layer 2: jsQR (QR codes) ───────────────────────────────────────
-  try {
-    const qrResult = await tryJsQR(file);
-    if (qrResult) return qrResult;
-  } catch { /* ignore */ }
-
-  // ── Layer 3: Gemini Vision — reads barcode digits from image ───────
-  // Most reliable fallback for EAN-13 printed on packaging
+  // ── Layer 3: Gemini Vision (last resort — reads printed digits under bars) ─
   try {
     const b64 = await fileToBase64(file);
     const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
@@ -625,13 +635,9 @@ async function scanBarcodeFromImage(file: File): Promise<string | null> {
             parts: [
               {
                 text: `Read the barcode number printed in digits below the barcode bars in this image.
-
-RULES:
-- Read each digit one at a time, left to right
-- EAN-13 has exactly 13 digits; EAN-8 has 8 digits
-- Only return digits you can clearly read from the printed number
-- Return ONLY the digit string, nothing else — no spaces, no dashes, no explanation
-- If you cannot read the digits clearly, return: NONE`,
+Read each digit one at a time left to right. EAN-13 = exactly 13 digits. EAN-8 = 8 digits.
+Return ONLY the digits as a plain number — no spaces, no dashes, no explanation.
+If you cannot clearly read all digits, return: NONE`,
               },
               { inline_data: { mime_type: mime, data: b64 } },
             ],
@@ -644,38 +650,11 @@ RULES:
       const raw = data as {candidates?: Array<{content?: {parts?: Array<{text?: string}>}}>};
       const text: string = raw?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       const digits = text.trim().replace(/\D/g, '');
-      // Valid barcode: 8-14 digits
       if (digits.length >= 8 && digits.length <= 14) return digits;
     }
-  } catch { /* Gemini not available */ }
+  } catch { /* Gemini unavailable */ }
 
   return null;
-}
-
-function tryJsQR(file: File): Promise<string | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width; canvas.height = img.height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const jsQR = (window as any).jsQR;
-      if (jsQR) {
-        const result = jsQR(imageData.data, imageData.width, imageData.height);
-        const digits = result?.data?.replace(/\D/g, '') ?? '';
-        resolve(digits.length >= 8 ? digits : null);
-      } else {
-        resolve(null);
-      }
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    img.src = url;
-  });
 }
 
 async function fileToBase64(file: File): Promise<string> {
