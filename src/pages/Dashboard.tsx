@@ -352,7 +352,7 @@ export function DashboardPage() {
           <EmptyState
             icon={<FileText className="h-5 w-5" />}
             title="No records uploaded"
-            description="Upload lab reports, prescriptions and scans in Documents."
+            description="Upload lab reports, prescriptions and scans in Health Vault."
           />
         </Card>
 

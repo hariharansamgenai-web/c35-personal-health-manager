@@ -14,17 +14,22 @@ import { NutritionBar } from '@/components/nutrition/NutritionBar';
 import { useFoods } from '@/hooks/useFoods';
 import { useMeals } from '@/hooks/useMeals';
 import {
+  addFoodLog,
   computeNutrition,
   dailyNutrition,
   deleteFoodLog,
+  getOrCreateMeal,
   MEAL_LABELS,
   MEAL_ORDER,
   mealNutrition,
   updateFoodLog,
 } from '@/lib/meals';
-import { deleteFood, toggleFavorite } from '@/lib/foods';
+import { createFood, deleteFood, toggleFavorite } from '@/lib/foods';
 import { addDays, longDate, todayISO } from '@/lib/health';
 import type { Food, FoodLog, MealType, MealWithLogs } from '@/types';
+import { AIFoodAnalyser } from '@/components/nutrition/AIFoodAnalyser';
+import { getIndianTargets, type DietType, type SaltLevel, type OilLevel } from '@/lib/indianNutrition';
+import type { GeminiFoodResult } from '@/lib/geminiNutrition';
 
 type FoodDialog = { kind: 'create' } | { kind: 'edit'; food: Food } | { kind: 'delete'; food: Food } | null;
 
@@ -38,6 +43,8 @@ export function NutritionPage() {
   const [editingLog, setEditingLog] = useState<{ log: FoodLog; qty: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [dietType, setDietType] = useState<DietType>('veg');
+  const indianTargets = getIndianTargets(dietType);
 
   const dayMeals = useMemo(() => meals.filter((m) => m.date === selectedDate), [meals, selectedDate]);
   const dayNutrition = useMemo(() => dailyNutrition(dayMeals), [dayMeals]);
@@ -49,6 +56,49 @@ export function NutritionPage() {
   }, [dayMeals]);
 
   if (!activeProfile) return <Loading label="Loading profile" />;
+
+  async function handleAIResult(
+    result: GeminiFoodResult,
+    portionG: number,
+    _saltLevel: SaltLevel,
+    _oilLevel: OilLevel,
+    itemIndex = 0,
+  ) {
+    // Pick the specific dish from multi-dish results
+    const item = result.items?.[itemIndex];
+    const foodName = item?.dish ?? result.food_name;
+    const weightG  = item?.weight_g ?? portionG;
+    // Derive per-100g macros from the item's portion values
+    const scale = weightG > 0 ? 100 / weightG : 1;
+    const cal100  = item ? Math.round(item.calories  * scale) : result.calories_per_100g;
+    const pro100  = item ? +(item.protein_g * scale).toFixed(2) : result.protein_g;
+    const carb100 = item ? +(item.carbs_g   * scale).toFixed(2) : result.carbs_g;
+    const fat100  = item ? +(item.fat_g     * scale).toFixed(2) : result.fat_g;
+    const fib100  = item ? +(item.fiber_g   * scale).toFixed(2) : result.fiber_g;
+
+    try {
+      // 1. Create the food in the user's food library
+      const food = await createFood(activeProfile!.id, {
+        name:              foodName,
+        calories_per_100g: cal100,
+        protein_g:         pro100,
+        carbs_g:           carb100,
+        fat_g:             fat100,
+        fiber_g:           fib100,
+        serving_size_g:    portionG,
+        is_favorite:       false,
+      });
+      // 2. Get or create the meal for the selected date (default: lunch)
+      const meal = await getOrCreateMeal(activeProfile!.id, selectedDate, 'lunch');
+      // 3. Add the food log
+      await addFoodLog(meal.id, { food_id: food.id, quantity_g: portionG });
+      // 4. Reload meals so the page reflects the new log
+      await reloadMeals();
+      await reloadFoods();
+    } catch (e) {
+      alert('Could not save food: ' + (e instanceof Error ? e.message : String(e)));
+    }
+  }
 
   const today = todayISO();
   function prevDay() { setSelectedDate((d) => addDays(d, -1)); }
@@ -117,9 +167,27 @@ export function NutritionPage() {
 
       {/* Daily summary */}
       <Card>
-        <CardHeader title="Daily summary" subtitle={selectedDate === today ? 'Today so far' : longDate(selectedDate)} className="mb-4" />
-        <NutritionBar summary={dayNutrition} />
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <CardHeader title="Daily summary" subtitle={selectedDate === today ? 'Today so far' : longDate(selectedDate)} />
+          {/* Veg / Non-veg toggle — affects Indian daily targets */}
+          <div className="flex gap-1.5">
+            <button onClick={() => setDietType('veg')}
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all"
+              style={{ background: dietType==='veg' ? '#dcfce7' : 'var(--bg-card-2,var(--bg-card))', color: dietType==='veg' ? '#166534' : 'var(--text-muted)', border: `1px solid ${dietType==='veg' ? '#86efac' : 'var(--border)'}` }}>
+              🌿 Veg
+            </button>
+            <button onClick={() => setDietType('nonveg')}
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all"
+              style={{ background: dietType==='nonveg' ? '#fee2e2' : 'var(--bg-card-2,var(--bg-card))', color: dietType==='nonveg' ? '#991b1b' : 'var(--text-muted)', border: `1px solid ${dietType==='nonveg' ? '#fca5a5' : 'var(--border)'}` }}>
+              🍖 Non-veg
+            </button>
+          </div>
+        </div>
+        <NutritionBar summary={dayNutrition} targets={indianTargets} />
       </Card>
+
+      {/* AI Food Analyser — Gemini-powered photo/text nutrition scanner */}
+      <AIFoodAnalyser onUse={handleAIResult} />
 
       {/* Meals */}
       <div className="grid gap-4 lg:grid-cols-2">

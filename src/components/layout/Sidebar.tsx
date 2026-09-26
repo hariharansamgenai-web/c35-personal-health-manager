@@ -12,12 +12,12 @@ const navItems = [
   { to: '/exercise',   label: 'Exercise',    icon: Dumbbell,        color: '#34d399' },
   { to: '/goals',      label: 'Goals',       icon: Target,          color: '#a78bfa' },
   { to: '/nutrition',  label: 'Nutrition',   icon: Apple,           color: '#fb923c' },
-  { to: '/documents',  label: 'Documents',   icon: FileText,        color: '#60a5fa' },
-  { to: '/timeline',   label: 'Timeline',    icon: Calendar,        color: '#f472b6' },
+  { to: '/documents',  label: 'Health Vault',   icon: FileText,        color: '#60a5fa' },
+  { to: '/timeline',   label: 'History',    icon: Calendar,        color: '#f472b6' },
   { to: '/sharing',    label: 'Sharing',     icon: Share2,          color: '#38bdf8' },
   { to: '/family',     label: 'Family',      icon: Users,           color: '#fbbf24' },
   { to: '/ai-summary', label: 'AI Summary',  icon: Sparkles,        color: '#c084fc' },
-  { to: '/wearables',  label: 'Wearables',   icon: Watch,           color: '#4ade80' },
+  { to: '/wearables',  label: 'Wearable Devices',   icon: Watch,           color: '#4ade80' },
 ];
 
 const accountItems = [
@@ -155,7 +155,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           border: '1px solid rgba(99,179,237,.12)',
         }}>
           <p style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontWeight: 600, letterSpacing: '.04em' }}>
-            Phases 1–14 complete
+            Group AIAP-G35
           </p>
           <p style={{ fontSize: 10, color: 'rgba(255,255,255,.22)', marginTop: 1 }}>
             Hackathon build · Sep 2026

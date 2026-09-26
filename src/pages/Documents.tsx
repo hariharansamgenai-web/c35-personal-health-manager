@@ -114,7 +114,7 @@ export function DocumentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900">Medical documents</h2>
+          <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-.02em' }}>Health Vault</h2>
           <p className="mt-1 text-sm text-neutral-600">
             Files for {activeProfile.display_name}. Stored privately — no public access.
           </p>
@@ -161,7 +161,7 @@ export function DocumentsPage() {
         <Card noPadding>
           <div className="border-b border-neutral-200 px-5 py-4">
             <CardHeader
-              title="Documents"
+              title="Health Vault"
               subtitle={`${filtered.length} of ${documents.length}`}
               action={<Filter className="h-4 w-4 text-neutral-400" />}
             />

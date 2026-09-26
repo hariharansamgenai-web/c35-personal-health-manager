@@ -13,13 +13,13 @@ const pageTitles: Record<string, string> = {
   '/exercise':   'Exercise & Activity',
   '/goals':      'Goals',
   '/nutrition':  'Nutrition',
-  '/documents':  'Documents',
-  '/timeline':   'Health Timeline',
+  '/documents':  'Health Vault',
+  '/timeline':   'History',
   '/sharing':    'Sharing',
   '/family':     'Family Profiles',
   '/profile':    'Profile',
   '/ai-summary': 'AI Health Summary',
-  '/wearables':  'Wearables & Devices',
+  '/wearables':  'Wearable Devices',
 };
 
 export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {

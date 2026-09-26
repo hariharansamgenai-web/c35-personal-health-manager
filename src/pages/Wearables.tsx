@@ -164,7 +164,7 @@ export function WearablesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-neutral-900">Wearables & devices</h2>
+        <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-.02em' }}>Wearable Devices</h2>
         <p className="mt-1 text-sm text-neutral-600">
           Connect a wearable to automatically import your activity, sleep, and step data for {activeProfile.display_name}.
         </p>
