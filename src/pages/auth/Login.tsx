@@ -5,6 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
+const GOOGLE_AUTH_ENABLED = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === 'true';
+
 function GoogleIcon() {
   return (
     <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -115,6 +117,7 @@ export function LoginPage() {
         </div>
 
         <div className="card-base space-y-4 p-6">
+          {GOOGLE_AUTH_ENABLED && (<>
           <Button
             type="button"
             variant="outline"
@@ -131,6 +134,7 @@ export function LoginPage() {
             <span className="text-xs text-neutral-400">or</span>
             <div className="h-px flex-1 bg-neutral-200" />
           </div>
+          </>)}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
