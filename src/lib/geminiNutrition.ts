@@ -187,12 +187,52 @@ export async function analyseFoodText(
 // ---------------------------------------------------------------------------
 
 export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
-  // Routes through Supabase Edge Function to avoid CORS in browsers/artifacts.
-  // In production: the Edge Function fetches Open Food Facts server-side.
-  const { data, error } = await supabase.functions.invoke('barcode-lookup', {
-    body: { barcode },
+  const clean = barcode.replace(/\D/g, '');
+
+  // ── Primary: Supabase Edge Function (production — avoids CORS) ─────
+  try {
+    const { data, error } = await supabase.functions.invoke('barcode-lookup', {
+      body: { barcode: clean },
+    });
+    // Edge Function available and returned data → use it
+    if (!error && data && (data as BarcodeResult).food_name) {
+      return data as BarcodeResult;
+    }
+    // Edge Function returned a real "not found" (HTTP 404) — don't fall through
+    if (!error && data && (data as Record<string,unknown>).error) {
+      throw new Error(String((data as Record<string,unknown>).error));
+    }
+  } catch (e) {
+    // Only fall through if the Edge Function is simply not deployed/reachable
+    const msg = e instanceof Error ? e.message : '';
+    const isDeployError = msg.includes('not available') || msg.includes('Failed to fetch') ||
+      msg.includes('FunctionsFetchError') || msg.includes('not found in demo');
+    if (!isDeployError) throw e; // real error (e.g. barcode not in DB) — propagate
+  }
+
+  // ── Fallback: direct Open Food Facts (preview / before Edge deploy) ─
+  const url = `https://world.openfoodfacts.org/api/v2/product/${clean}.json`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'PHM-HealthApp/1.0 (contact@phm.app)' },
   });
-  if (error) throw new Error(error.message ?? `Barcode ${barcode} not found.`);
-  if (!data) throw new Error(`Barcode ${barcode} not found in Open Food Facts database.`);
-  return data as BarcodeResult;
+  if (!res.ok) throw new Error(`Barcode ${clean} — product not found (HTTP ${res.status}).`);
+  const json = await res.json();
+  if (json.status !== 1 || !json.product) throw new Error(`Barcode ${clean} not found in Open Food Facts.`);
+
+  const p = json.product;
+  const n = p.nutriments ?? {};
+  return {
+    food_name:          p.product_name || p.product_name_en || 'Unknown product',
+    brand:              p.brands ?? '',
+    calories_per_100g:  n['energy-kcal_100g'] ?? Math.round((n['energy_100g'] ?? 0) / 4.184),
+    protein_g:          n.proteins_100g ?? 0,
+    carbs_g:            n.carbohydrates_100g ?? 0,
+    fat_g:              n.fat_100g ?? 0,
+    fiber_g:            n.fiber_100g ?? 0,
+    sodium_mg_per_100g: (n.sodium_100g ?? 0) * 1000,
+    serving_size_g:     p.serving_quantity ? Number(p.serving_quantity) : 100,
+    image_url:          p.image_front_small_url ?? p.image_url ?? null,
+    is_veg:             p.labels?.toLowerCase().includes('veg') ?? null,
+    nutriscore:         p.nutriscore_grade?.toUpperCase() ?? null,
+  };
 }
