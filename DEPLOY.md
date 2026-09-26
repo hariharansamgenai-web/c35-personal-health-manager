@@ -182,3 +182,28 @@ Optionally configure SMTP (Settings → Auth → SMTP) for real password-reset e
 - Radix UI primitives + class-variance-authority
 - Lucide React icons
 - Vitest unit tests (38 tests)
+
+
+---
+
+## Live deployment (27 Sep 2026)
+
+| Layer | Where |
+|---|---|
+| Live URL | https://pulsepath-aiap.netlify.app |
+| Netlify project | `pulsepath-aiap` (deploys from `Lovaber/Personal-Health-Manager` main) |
+| Supabase project | `pulsepath` — ref `nrgkvggwmlkkvqrhzkdv` — Southeast Asia (Singapore) |
+| Source of truth | `hariharansamgenai-web/c35-personal-health-manager` branch `BranchBabu` |
+
+### Redeploy
+```bash
+./deploy.sh "your commit message"
+```
+Pushes to BranchBabu **and** the Lovaber mirror; Netlify rebuilds automatically (~1 min).
+
+### Env vars (set in Netlify → Site configuration → Environment variables)
+- `VITE_SUPABASE_URL` = `https://nrgkvggwmlkkvqrhzkdv.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = anon key from Supabase → Settings → API Keys → Legacy
+
+### Supabase secrets (Edge Functions → Secrets)
+- `GEMINI_API_KEY`
