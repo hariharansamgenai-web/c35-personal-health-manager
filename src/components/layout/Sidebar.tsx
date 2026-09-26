@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, HeartPulse, Dumbbell, Target, Apple, FileText,
-  Calendar, Share2, Users, User, Sparkles, Watch,
+  Calendar, Share2, User, Sparkles, Watch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,7 +15,6 @@ const navItems = [
   { to: '/documents',  label: 'Health Vault',   icon: FileText,        color: '#60a5fa' },
   { to: '/timeline',   label: 'History',    icon: Calendar,        color: '#f472b6' },
   { to: '/sharing',    label: 'Sharing',     icon: Share2,          color: '#38bdf8' },
-  { to: '/family',     label: 'Family',      icon: Users,           color: '#fbbf24' },
   { to: '/ai-summary', label: 'AI Summary',  icon: Sparkles,        color: '#c084fc' },
   { to: '/wearables',  label: 'Wearable Devices',   icon: Watch,           color: '#4ade80' },
 ];
