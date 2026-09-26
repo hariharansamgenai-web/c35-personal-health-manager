@@ -31,7 +31,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const title = pageTitles[location.pathname] || 'Personal Health Manager';
+  const title = pageTitles[location.pathname] || 'PulsePath';
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

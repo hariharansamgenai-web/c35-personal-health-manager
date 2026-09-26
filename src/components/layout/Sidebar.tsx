@@ -35,23 +35,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         marginBottom: '4px',
       }}>
         <div className="flex items-center gap-3">
-          {/* Glow logo mark */}
+          {/* PulsePath logo mark */}
           <div style={{
             width: 36, height: 36,
             borderRadius: 10,
-            background: 'linear-gradient(135deg, #63b3ed, #3182ce)',
-            boxShadow: '0 0 16px rgba(99,179,237,.45)',
+            background: 'linear-gradient(135deg, #0d9488, #0f766e)',
+            boxShadow: '0 0 16px rgba(13,148,136,.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}>
-            <Activity style={{ width: 18, height: 18, color: '#fff', strokeWidth: 2.2 }} />
+            <Activity style={{ width: 20, height: 20, color: '#fff', strokeWidth: 2.5 }} />
           </div>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1, letterSpacing: '-.02em' }}>
-              HealthMgr
+            <p style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: '-.03em' }}>
+              PulsePath
             </p>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', marginTop: 2, fontWeight: 600, letterSpacing: '.04em' }}>
-              T2D MONITORING
+            <p style={{ fontSize: 9, color: 'rgba(255,255,255,.45)', marginTop: 3, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+              Small habits. Better health.
             </p>
           </div>
         </div>

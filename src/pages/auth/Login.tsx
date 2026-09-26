@@ -71,7 +71,7 @@ export function LoginPage() {
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600">
             <Activity className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-neutral-900">Personal Health Manager</h1>
+          <h1 className="text-xl font-bold text-neutral-900">PulsePath</h1>
           <p className="mt-1 text-sm text-neutral-500">Sign in to your account</p>
         </div>
 

@@ -213,7 +213,7 @@ export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
   // ── Fallback: direct Open Food Facts (preview / before Edge deploy) ─
   const url = `https://world.openfoodfacts.org/api/v2/product/${clean}.json`;
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'PHM-HealthApp/1.0 (contact@phm.app)' },
+    headers: { 'User-Agent': 'PulsePath/1.0 (contact@pulsepath.app)' },
   });
   if (!res.ok) throw new Error(`Barcode ${clean} — product not found (HTTP ${res.status}).`);
   const json = await res.json();
