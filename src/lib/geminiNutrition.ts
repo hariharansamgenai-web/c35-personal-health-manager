@@ -1,48 +1,43 @@
 /**
  * Gemini 1.5 Flash — Indian food vision + text nutrition analyser
- * Architecture follows the PDF spec:
- *   - Gemini 1.5 Flash for multi-dish thali recognition (free tier: 15 RPM via Google AI Studio)
- *   - Open Food Facts REST for packaged Indian barcodes (100% free, GS1 India 890 prefix)
- *   - ICMR-NIN / IFCT 2017 values in the prompt
  *
- * API key is client-side (acceptable for hackathon prototype).
- * For production, proxy through a Supabase Edge Function.
+ * Calls are routed through the Supabase Edge Function `gemini-proxy`
+ * to avoid CORS issues in the browser. The Gemini API key lives in
+ * Supabase secrets (GEMINI_API_KEY), never in the frontend bundle.
+ *
+ * Architecture (PDF spec):
+ *   - Gemini 1.5 Flash for multi-dish thali recognition
+ *   - Open Food Facts REST for packaged Indian barcodes (free)
+ *   - ICMR-NIN / IFCT 2017 nutritional values in the prompt
  */
 
-const GEMINI_API_KEY = 'AIzaSyAb8RN6LtSmCkfWcnyhgY0URnDfSpzjhAD4VrPGRIxdjQ-YMVgw';
-
-// Use gemini-1.5-flash as recommended by the PDF for Indian meal vision
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-/** One dish item — returned for both single-food and multi-dish (thali) analysis */
 export interface GeminiFoodItem {
   dish: string;
   serving_unit: 'katori' | 'roti' | 'tbsp' | 'piece' | 'glass' | 'plate' | 'g';
-  estimated_qty: number;       // in serving_unit
-  weight_g: number;            // estimated weight in grams
-  calories: number;            // total for this portion
-  protein_g: number;           // total for this portion
-  carbs_g: number;             // total for this portion
-  fat_g: number;               // total for this portion
-  fiber_g: number;             // total for this portion
-  sodium_mg: number;           // total for this portion
+  estimated_qty: number;
+  weight_g: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sodium_mg: number;
   is_veg: boolean;
-  indian_context: string;      // e.g. "South Indian breakfast staple"
+  indian_context: string;
   confidence: 'high' | 'medium' | 'low';
 }
 
-/** Full result wrapping one or more dishes */
 export interface GeminiFoodResult {
   items: GeminiFoodItem[];
-  /** Convenience — single food name for backward compat */
   food_name: string;
   description: string;
   estimated_portion_g: number;
-  /** Per-100g macros of the primary / only dish */
   calories_per_100g: number;
   protein_g: number;
   carbs_g: number;
@@ -54,7 +49,6 @@ export interface GeminiFoodResult {
   confidence: 'high' | 'medium' | 'low';
 }
 
-/** Result from Open Food Facts barcode lookup */
 export interface BarcodeResult {
   food_name: string;
   brand: string;
@@ -66,21 +60,21 @@ export interface BarcodeResult {
   sodium_mg_per_100g: number;
   serving_size_g: number;
   image_url: string | null;
-  is_veg: boolean | null;       // India veg mark — not always available
+  is_veg: boolean | null;
   nutriscore: string | null;
 }
 
 // ---------------------------------------------------------------------------
-// Prompts — per PDF spec: identify all items, return JSON array
+// Prompt
 // ---------------------------------------------------------------------------
 
-const THALI_SYSTEM_PROMPT = `You are an expert Indian nutritionist trained on ICMR-NIN 2020 and IFCT 2017 data.
-Analyse the food photo or description provided. Identify ALL items (e.g. roti, dal, sabzi, curd, rice, pickle).
-Return ONLY a valid JSON array — no markdown, no explanation — using Indian household units:
+const THALI_PROMPT = `You are an expert Indian nutritionist trained on ICMR-NIN 2020 and IFCT 2017 data.
+Analyse the food photo or description. Identify ALL items (e.g. roti, dal, sabzi, curd, rice, pickle).
+Return ONLY a valid JSON array with NO markdown fences, no explanation:
 
 [
   {
-    "dish": "string — specific Indian food name",
+    "dish": "specific Indian food name",
     "serving_unit": "katori|roti|tbsp|piece|glass|plate|g",
     "estimated_qty": number,
     "weight_g": number,
@@ -91,121 +85,34 @@ Return ONLY a valid JSON array — no markdown, no explanation — using Indian 
     "fiber_g": number,
     "sodium_mg": number,
     "is_veg": boolean,
-    "indian_context": "string — e.g. South Indian breakfast staple, North Indian staple",
+    "indian_context": "e.g. South Indian breakfast staple",
     "confidence": "high|medium|low"
   }
 ]
 
 Rules:
 - All macro values are for the ESTIMATED PORTION (not per 100g).
-- Use standard Indian serving sizes: 1 katori ≈ 150g, 1 medium roti ≈ 40g, 1 tbsp ≈ 15g.
-- Base nutritional values on ICMR-NIN / IFCT 2017 where possible.
-- Adjust for oil/ghee visible in cooking — include in fat_g.
-- If only one food item, still return a single-element array.
-- If food is not identifiable, set confidence to "low" and give best estimate.
-- Diet context (veg/non-veg) is provided separately — use it to filter assumptions.`;
+- Standard sizes: 1 katori≈150g, 1 medium roti≈40g, 1 tbsp≈15g.
+- Use ICMR-NIN/IFCT 2017 values. Adjust fat_g for visible oil/ghee.
+- Return single-element array for one food item.
+- Set confidence "low" if uncertain.`;
 
 // ---------------------------------------------------------------------------
-// Gemini vision — photo (thali / single dish)
+// Core proxy caller
 // ---------------------------------------------------------------------------
-export async function analyseFoodImage(
-  base64Image: string,
-  mimeType: 'image/jpeg' | 'image/png',
-  isVeg: boolean,
-  saltLevel: string,
-  oilLevel: string,
-): Promise<GeminiFoodResult> {
-  const body = {
-    contents: [{
-      parts: [
-        {
-          text: `${THALI_SYSTEM_PROMPT}\n\nDiet preference: ${isVeg ? 'Vegetarian' : 'Non-vegetarian'}. Salt level: ${saltLevel}. Oil level: ${oilLevel}.`,
-        },
-        { inline_data: { mime_type: mimeType, data: base64Image } },
-      ],
-    }],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 1024,
-      response_mime_type: 'application/json',
-    },
-  };
-  return callGeminiAndNormalize(body);
-}
 
-// ---------------------------------------------------------------------------
-// Gemini text — description (single food or full meal description)
-// ---------------------------------------------------------------------------
-export async function analyseFoodText(
-  description: string,
-  isVeg: boolean,
-  saltLevel: string,
-  oilLevel: string,
-): Promise<GeminiFoodResult> {
-  const prompt = `${THALI_SYSTEM_PROMPT}\n\nFood to analyse: "${description}"\nDiet preference: ${isVeg ? 'Vegetarian' : 'Non-vegetarian'}. Salt level: ${saltLevel}. Oil level: ${oilLevel}.`;
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 1024,
-      response_mime_type: 'application/json',
-    },
-  };
-  return callGeminiAndNormalize(body);
-}
-
-// ---------------------------------------------------------------------------
-// Open Food Facts — barcode lookup (GS1 India prefix 890)
-// ---------------------------------------------------------------------------
-export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
-  const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'PHM-HealthApp/1.0 (contact@developer.com)' },
+async function callGeminiProxy(model: string, body: object): Promise<object> {
+  const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+    body: { model, body },
   });
-
-  if (!res.ok) throw new Error(`Open Food Facts returned ${res.status} for barcode ${barcode}.`);
-
-  const data = await res.json();
-  if (data.status !== 1 || !data.product) {
-    throw new Error(`Barcode ${barcode} not found in Open Food Facts database.`);
-  }
-
-  const p = data.product;
-  const n = p.nutriments ?? {};
-
-  return {
-    food_name:          p.product_name || p.product_name_en || 'Unknown product',
-    brand:              p.brands ?? '',
-    calories_per_100g:  n['energy-kcal_100g'] ?? n['energy_100g'] ? Math.round((n['energy_100g'] ?? 0) / 4.184) : 0,
-    protein_g:          n.proteins_100g ?? 0,
-    carbs_g:            n.carbohydrates_100g ?? 0,
-    fat_g:              n.fat_100g ?? 0,
-    fiber_g:            n.fiber_100g ?? 0,
-    sodium_mg_per_100g: (n.sodium_100g ?? 0) * 1000,
-    serving_size_g:     p.serving_quantity ? Number(p.serving_quantity) : 100,
-    image_url:          p.image_front_small_url ?? p.image_url ?? null,
-    is_veg:             p.labels?.toLowerCase().includes('veg') ?? null,
-    nutriscore:         p.nutriscore_grade?.toUpperCase() ?? null,
-  };
+  if (error) throw new Error(error.message ?? 'Gemini proxy error');
+  if ((data as Record<string,unknown>)?.error) throw new Error(String((data as Record<string,unknown>).error));
+  return data as object;
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-async function callGeminiAndNormalize(body: object): Promise<GeminiFoodResult> {
-  const res = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Gemini API error ${res.status}${text ? ': ' + text.slice(0, 160) : ''}`);
-  }
-
-  const data = await res.json();
-  const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+async function callGeminiAndNormalize(model: string, body: object): Promise<GeminiFoodResult> {
+  const data = await callGeminiProxy(model, body) as Record<string, unknown>;
+  const raw: string = (data?.candidates as Array<{content:{parts:Array<{text:string}>}}>)?.[0]?.content?.parts?.[0]?.text ?? '';
   const clean = raw.replace(/```json|```/g, '').trim();
 
   let items: GeminiFoodItem[];
@@ -218,9 +125,8 @@ async function callGeminiAndNormalize(body: object): Promise<GeminiFoodResult> {
 
   if (!items.length) throw new Error('Gemini returned no food items.');
 
-  // Build backward-compat flat result from first (primary) item
   const primary = items[0];
-  const totalWeight = items.reduce((s, i) => s + i.weight_g, 0) || primary.weight_g;
+  const totalWeight = items.reduce((s, i) => s + (i.weight_g || 0), 0) || primary.weight_g;
 
   return {
     items,
@@ -236,5 +142,73 @@ async function callGeminiAndNormalize(body: object): Promise<GeminiFoodResult> {
     is_veg:              items.every(i => i.is_veg),
     indian_context:      primary.indian_context,
     confidence:          primary.confidence,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+export async function analyseFoodImage(
+  base64Image: string,
+  mimeType: 'image/jpeg' | 'image/png',
+  isVeg: boolean,
+  saltLevel: string,
+  oilLevel: string,
+): Promise<GeminiFoodResult> {
+  const body = {
+    contents: [{
+      parts: [
+        { text: `${THALI_PROMPT}\n\nDiet: ${isVeg ? 'Vegetarian' : 'Non-vegetarian'}. Salt: ${saltLevel}. Oil: ${oilLevel}.` },
+        { inline_data: { mime_type: mimeType, data: base64Image } },
+      ],
+    }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+  };
+  return callGeminiAndNormalize('gemini-1.5-flash', body);
+}
+
+export async function analyseFoodText(
+  description: string,
+  isVeg: boolean,
+  saltLevel: string,
+  oilLevel: string,
+): Promise<GeminiFoodResult> {
+  const prompt = `${THALI_PROMPT}\n\nFood: "${description}"\nDiet: ${isVeg ? 'Vegetarian' : 'Non-vegetarian'}. Salt: ${saltLevel}. Oil: ${oilLevel}.`;
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+  };
+  return callGeminiAndNormalize('gemini-1.5-flash', body);
+}
+
+// ---------------------------------------------------------------------------
+// Open Food Facts — barcode (runs client-side fine, different domain)
+// ---------------------------------------------------------------------------
+
+export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
+  const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'PHM-HealthApp/1.0 (contact@developer.com)' },
+  });
+  if (!res.ok) throw new Error(`Open Food Facts returned ${res.status} for barcode ${barcode}.`);
+  const data = await res.json();
+  if (data.status !== 1 || !data.product) throw new Error(`Barcode ${barcode} not found.`);
+
+  const p = data.product;
+  const n = p.nutriments ?? {};
+  return {
+    food_name:          p.product_name || p.product_name_en || 'Unknown product',
+    brand:              p.brands ?? '',
+    calories_per_100g:  n['energy-kcal_100g'] ?? Math.round((n['energy_100g'] ?? 0) / 4.184),
+    protein_g:          n.proteins_100g ?? 0,
+    carbs_g:            n.carbohydrates_100g ?? 0,
+    fat_g:              n.fat_100g ?? 0,
+    fiber_g:            n.fiber_100g ?? 0,
+    sodium_mg_per_100g: (n.sodium_100g ?? 0) * 1000,
+    serving_size_g:     p.serving_quantity ? Number(p.serving_quantity) : 100,
+    image_url:          p.image_front_small_url ?? p.image_url ?? null,
+    is_veg:             p.labels?.toLowerCase().includes('veg') ?? null,
+    nutriscore:         p.nutriscore_grade?.toUpperCase() ?? null,
   };
 }

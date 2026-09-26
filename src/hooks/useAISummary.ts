@@ -10,8 +10,6 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { todayISO, addDays } from '@/lib/health';
 
-const GEMINI_API_KEY = 'AIzaSyAb8RN6LtSmCkfWcnyhgY0URnDfSpzjhAD4VrPGRIxdjQ-YMVgw';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 export interface SummaryResult {
   summary: string;
@@ -111,23 +109,21 @@ Active goals: ${stats.active_goals}
 
 Write the health pattern summary now.`;
 
-      const res = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: { maxOutputTokens: 600, temperature: 0.4 },
-        }),
+      const geminiBody = {
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: { maxOutputTokens: 600, temperature: 0.4 },
+      };
+
+      const { data: proxyData, error: fnError } = await supabase.functions.invoke('gemini-proxy', {
+        body: { model: 'gemini-2.0-flash', body: geminiBody },
       });
 
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(`Gemini error ${res.status}: ${errBody?.error?.message ?? 'unknown error'}`);
-      }
+      if (fnError) throw new Error(fnError.message ?? 'Could not reach AI service.');
+      if (proxyData?.error) throw new Error(String(proxyData.error));
 
-      const data = await res.json();
-      const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const data = proxyData;
+      const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       if (!text) throw new Error('Gemini returned an empty response. Please try again.');
 
       const disclaimer = 'This is an informational summary only — not medical advice. Please consult your healthcare provider for medical decisions.';
