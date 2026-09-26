@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, HeartPulse, Dumbbell, Target, Apple, FileText,
-  Calendar, Share2, Users, User, Sparkles, Activity, Watch,
+  Calendar, Share2, Users, User, Sparkles, Watch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,22 +35,49 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         marginBottom: '4px',
       }}>
         <div className="flex items-center gap-3">
-          {/* PulsePath logo mark */}
+          {/* PulsePath — Golden Heart logo */}
           <div style={{
-            width: 36, height: 36,
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, #0d9488, #0f766e)',
-            boxShadow: '0 0 16px rgba(13,148,136,.5)',
+            width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+            background: 'linear-gradient(145deg,#1a2340,#0e1628)',
+            boxShadow: '0 0 18px rgba(245,158,11,.35), 0 2px 8px rgba(0,0,0,.6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
           }}>
-            <Activity style={{ width: 20, height: 20, color: '#fff', strokeWidth: 2.5 }} />
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#fbbf24"/>
+                  <stop offset="100%" stopColor="#f59e0b"/>
+                </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="1.2" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              {/* Heart outline — two arcs meeting at bottom point */}
+              <path
+                d="M13,21 C13,21 3,15 3,9 C3,6 5.5,4 8.5,4 C10.5,4 12,5 13,6.5 C14,5 15.5,4 17.5,4 C20.5,4 23,6 23,9 C23,15 13,21 13,21 Z"
+                stroke="url(#hg)" strokeWidth="1.8" fill="none"
+                strokeLinejoin="round" filter="url(#glow)"
+              />
+              {/* Outer glow ring — slightly larger, very faint */}
+              <path
+                d="M13,22 C13,22 1.5,15.5 1.5,8.5 C1.5,5 4.2,2.5 7.8,2.5 C10.2,2.5 12,3.8 13,5.5 C14,3.8 15.8,2.5 18.2,2.5 C21.8,2.5 24.5,5 24.5,8.5 C24.5,15.5 13,22 13,22 Z"
+                stroke="#f59e0b" strokeWidth="0.6" fill="none" opacity="0.25"
+              />
+              {/* ECG line cutting through heart mid-section */}
+              <path
+                d="M4,12.5 L7.5,12.5 L9,9.5 L11,15.5 L12.5,11 L14,12.5 L16,12.5 L17.5,9.5 L19,15.5 L20.5,12.5 L22,12.5"
+                stroke="#fbbf24" strokeWidth="1.5" fill="none"
+                strokeLinecap="round" strokeLinejoin="round"
+                filter="url(#glow)"
+              />
+            </svg>
           </div>
           <div>
             <p style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: '-.03em' }}>
               PulsePath
             </p>
-            <p style={{ fontSize: 9, color: 'rgba(255,255,255,.45)', marginTop: 3, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 9, color: 'rgba(245,158,11,.5)', marginTop: 3, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
               Small habits. Better health.
             </p>
           </div>

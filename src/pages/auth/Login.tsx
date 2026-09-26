@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Activity, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -68,8 +68,26 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600">
-            <Activity className="h-7 w-7 text-white" />
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl"
+            style={{ background: 'linear-gradient(145deg,#1a2340,#0e1628)', boxShadow: '0 0 24px rgba(245,158,11,.4), 0 4px 12px rgba(0,0,0,.5)' }}>
+            <svg width="36" height="36" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#fbbf24"/>
+                  <stop offset="100%" stopColor="#f59e0b"/>
+                </linearGradient>
+                <filter id="glow2">
+                  <feGaussianBlur stdDeviation="1.2" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <path d="M13,21 C13,21 3,15 3,9 C3,6 5.5,4 8.5,4 C10.5,4 12,5 13,6.5 C14,5 15.5,4 17.5,4 C20.5,4 23,6 23,9 C23,15 13,21 13,21 Z"
+                stroke="url(#hg2)" strokeWidth="1.8" fill="none" strokeLinejoin="round" filter="url(#glow2)"/>
+              <path d="M13,22 C13,22 1.5,15.5 1.5,8.5 C1.5,5 4.2,2.5 7.8,2.5 C10.2,2.5 12,3.8 13,5.5 C14,3.8 15.8,2.5 18.2,2.5 C21.8,2.5 24.5,5 24.5,8.5 C24.5,15.5 13,22 13,22 Z"
+                stroke="#f59e0b" strokeWidth="0.6" fill="none" opacity="0.25"/>
+              <path d="M4,12.5 L7.5,12.5 L9,9.5 L11,15.5 L12.5,11 L14,12.5 L16,12.5 L17.5,9.5 L19,15.5 L20.5,12.5 L22,12.5"
+                stroke="#fbbf24" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow2)"/>
+            </svg>
           </div>
           <h1 className="text-xl font-bold text-neutral-900">PulsePath</h1>
           <p className="mt-1 text-sm text-neutral-500">Sign in to your account</p>
