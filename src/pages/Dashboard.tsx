@@ -9,7 +9,6 @@ import {
 import { useActiveProfile } from '@/context/ActiveProfileContext';
 import { Loading } from '@/components/feedback/Loading';
 import { ErrorState } from '@/components/feedback/ErrorState';
-import { GlucoseChart } from '@/components/health/GlucoseChart';
 
 import { useCheckIns } from '@/hooks/useCheckIns';
 import { useGoals } from '@/hooks/useGoals';
@@ -561,35 +560,159 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Blood sugar chart ──────────────────────────────────────── */}
+        {/* ── 7-day glucose heatmap ───────────────────────────────────── */}
         <div style={{
           padding: '16px 20px', borderRadius: 18,
           background: 'var(--bg-card)', border: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Blood sugar · last 7 days</p>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Red markers outside 70–250 mg/dL range</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Blood sugar · 7-day heatmap</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Each day coloured by fasting reading</p>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['7D','30D','3M'].map(t => (
-                <button key={t} style={{
-                  padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-                  background: t === '7D' ? 'var(--accent-bg)' : 'transparent',
-                  color: t === '7D' ? 'var(--accent)' : 'var(--text-muted)',
-                  border: `1px solid ${t === '7D' ? 'var(--accent-border)' : 'var(--border)'}`,
-                  cursor: 'pointer',
-                }}>{t}</button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {[{ label: 'In range', color: '#10b981' }, { label: 'Watch', color: '#f59e0b' }, { label: 'High', color: '#ef4444' }].map(l => (
+                <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-muted)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color, display: 'inline-block' }} />{l.label}
+                </span>
               ))}
             </div>
           </div>
-          {week.some(c => c.glucose_fasting !== null || c.glucose_post_meal !== null) ? (
-            <GlucoseChart days={days} checkIns={week} />
-          ) : (
-            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', padding: '24px 0' }}>
-              No blood sugar readings this week yet.
-            </p>
-          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
+            {days.map(day => {
+              const entry = week.find(c => c.date === day);
+              const glucose = entry?.glucose_fasting ?? null;
+              const tone = glucose === null ? 'none'
+                : glucose <= GLUCOSE.FASTING_MAX ? 'good'
+                : glucose <= 180 ? 'warn' : 'danger';
+              const bg = tone === 'good' ? 'rgba(16,185,129,.18)' : tone === 'warn' ? 'rgba(245,158,11,.18)' : tone === 'danger' ? 'rgba(239,68,68,.18)' : 'var(--bg-card-2,var(--bg-card))';
+              const border = tone === 'good' ? 'rgba(16,185,129,.35)' : tone === 'warn' ? 'rgba(245,158,11,.35)' : tone === 'danger' ? 'rgba(239,68,68,.35)' : 'var(--border)';
+              const textColor = tone === 'good' ? '#10b981' : tone === 'warn' ? '#f59e0b' : tone === 'danger' ? '#ef4444' : 'var(--text-muted)';
+              const dayLabel = new Date(day + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
+              return (
+                <div key={day} style={{
+                  borderRadius: 10, padding: '10px 6px', textAlign: 'center',
+                  background: bg, border: `1px solid ${border}`,
+                }}>
+                  <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>{dayLabel}</p>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: textColor, letterSpacing: '-.03em', lineHeight: 1 }}>
+                    {glucose !== null ? glucose : '–'}
+                  </p>
+                  <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>mg/dL</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Medication streak tracker ────────────────────────────────── */}
+        <div style={{
+          padding: '16px 20px', borderRadius: 18,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Medication streak</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Last 7 days · tap a day to log</p>
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+              background: stats.adherence !== null && stats.adherence >= 85 ? 'rgba(16,185,129,.15)' : 'rgba(245,158,11,.15)',
+              color: stats.adherence !== null && stats.adherence >= 85 ? '#10b981' : '#f59e0b',
+            }}>
+              {stats.adherence !== null ? `${Math.round(stats.adherence)}% adherence` : 'No data'}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
+            {days.map(day => {
+              const entry = week.find(c => c.date === day);
+              const taken = entry?.meds_taken;
+              const dayLabel = new Date(day + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
+              const isToday = day === today;
+              return (
+                <div key={day}
+                  onClick={() => navigate('/check-ins')}
+                  style={{
+                    borderRadius: 10, padding: '10px 4px', textAlign: 'center', cursor: 'pointer',
+                    background: taken === true ? 'rgba(16,185,129,.15)' : taken === false ? 'rgba(239,68,68,.1)' : 'var(--bg-card-2,var(--bg-card))',
+                    border: `${isToday ? '2px' : '1px'} solid ${taken === true ? 'rgba(16,185,129,.4)' : taken === false ? 'rgba(239,68,68,.3)' : 'var(--border)'}`,
+                  }}
+                >
+                  <p style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 5 }}>{dayLabel}</p>
+                  <div style={{ fontSize: 18, lineHeight: 1 }}>
+                    {taken === true ? '💊' : taken === false ? '✗' : '○'}
+                  </div>
+                  <p style={{ fontSize: 9, marginTop: 5, fontWeight: 600,
+                    color: taken === true ? '#10b981' : taken === false ? '#ef4444' : 'var(--text-muted)' }}>
+                    {taken === true ? 'Taken' : taken === false ? 'Missed' : 'Not logged'}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Weekly check-in summary ──────────────────────────────────── */}
+        <div style={{
+          padding: '16px 20px', borderRadius: 18,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>This week at a glance</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Daily log completeness · last 7 days</p>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>
+              {stats.loggedDays}/7 days logged
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[...days].reverse().slice(0, 5).map(day => {
+              const entry = week.find(c => c.date === day);
+              if (!entry) return (
+                <div key={day} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  borderRadius: 10, border: '1px solid var(--border)', opacity: .45,
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', minWidth: 34 }}>
+                    {new Date(day + 'T12:00:00').toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Not logged</span>
+                </div>
+              );
+              const chips = [
+                entry.meds_taken !== null && { label: entry.meds_taken ? '💊 Meds ✓' : '💊 Missed', ok: entry.meds_taken },
+                entry.glucose_fasting !== null && { label: `🩸 ${entry.glucose_fasting}`, ok: entry.glucose_fasting <= GLUCOSE.FASTING_MAX },
+                entry.steps !== null && { label: `👣 ${(entry.steps / 1000).toFixed(1)}k`, ok: entry.steps >= STEP_GOAL },
+                entry.water_ml !== null && { label: `💧 ${(entry.water_ml / 1000).toFixed(1)}L`, ok: entry.water_ml >= WATER_GOAL_ML },
+                entry.sleep_hours !== null && { label: `😴 ${entry.sleep_hours.toFixed(1)}h`, ok: entry.sleep_hours >= SLEEP_GOAL_HOURS },
+              ].filter(Boolean) as Array<{ label: string; ok: boolean | null }>;
+              const isToday = day === today;
+              return (
+                <div key={day} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  borderRadius: 10,
+                  border: `1px solid ${isToday ? 'rgba(13,148,136,.4)' : 'var(--border)'}`,
+                  background: isToday ? 'rgba(13,148,136,.06)' : 'transparent',
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: isToday ? '#0d9488' : 'var(--text-secondary)', minWidth: 56, flexShrink: 0 }}>
+                    {isToday ? 'Today' : new Date(day + 'T12:00:00').toLocaleDateString('en', { weekday: 'short', day: 'numeric' })}
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, flex: 1 }}>
+                    {chips.map((chip, i) => (
+                      <span key={i} style={{
+                        fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20,
+                        background: chip.ok ? 'rgba(16,185,129,.12)' : chip.ok === false ? 'rgba(239,68,68,.1)' : 'var(--bg-card)',
+                        color: chip.ok ? '#10b981' : chip.ok === false ? '#ef4444' : 'var(--text-muted)',
+                        border: `1px solid ${chip.ok ? 'rgba(16,185,129,.25)' : chip.ok === false ? 'rgba(239,68,68,.2)' : 'var(--border)'}`,
+                      }}>{chip.label}</span>
+                    ))}
+                    {chips.length === 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>No readings logged</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── AI Insights ─────────────────────────────────────────────── */}
