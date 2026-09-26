@@ -490,10 +490,23 @@ export function DashboardPage() {
             </button>
           )}
         </div>
-        {/* Emergency bell */}
-        <button onClick={()=>setShowEmergency(true)} title="Emergency — alert family"
-          style={{ width:52,height:52,borderRadius:16,border:'2px solid rgba(239,68,68,.4)',background:'rgba(239,68,68,.1)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0 }}>
-          <Bell style={{ width:22,height:22,color:'#ef4444' }}/>
+        {/* Emergency SOS bell */}
+        <button onClick={()=>setShowEmergency(true)} title="SOS Emergency — alert family"
+          style={{
+            width:58,height:58,borderRadius:16,border:'2px solid rgba(239,68,68,.6)',
+            background:'rgba(239,68,68,.12)',
+            display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+            cursor:'pointer',flexShrink:0,gap:1,
+            boxShadow:'0 0 16px rgba(239,68,68,.25)',
+          }}>
+          {/* Bell icon */}
+          <Bell style={{ width:20,height:20,color:'#ef4444' }}/>
+          {/* SOS label */}
+          <span style={{
+            fontSize:9,fontWeight:900,color:'#ef4444',
+            letterSpacing:'.12em',lineHeight:1,
+            fontFamily:'system-ui,sans-serif',
+          }}>SOS</span>
         </button>
       </div>
 
