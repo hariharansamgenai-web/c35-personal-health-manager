@@ -72,8 +72,9 @@ export function AIFoodAnalyser({ onUse }: Props) {
     const barcode = await scanBarcodeFromImage(f);
 
     if (barcode) {
-      // Barcode found → show barcode path
+      // Barcode found → pre-fill manual field so user can verify/correct digits
       setDetectedBarcode(barcode);
+      setManualBarcode(barcode);
       setDetection('barcode');
     } else {
       // No barcode → treat as food photo
@@ -256,7 +257,7 @@ export function AIFoodAnalyser({ onUse }: Props) {
                   {detection === 'none'
                     ? 'Works for food dishes AND product barcodes — auto-detected'
                     : detection === 'detecting' ? 'Checking for barcode…'
-                    : detection === 'barcode' ? `Code: ${detectedBarcode}`
+                    : detection === 'barcode' ? 'Barcode scanned — verify digits below'  
                     : 'Gemini AI will identify all items on the plate'}
                 </span>
               </button>
@@ -325,6 +326,14 @@ export function AIFoodAnalyser({ onUse }: Props) {
                   <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                 </div>
 
+                {/* Detected badge — shows when barcode came from camera scan */}
+                {detection === 'barcode' && imageFile && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold mb-1"
+                    style={{ color: '#34d399' }}>
+                    <Barcode className="h-3.5 w-3.5" />
+                    Camera read: {detectedBarcode} — edit below if digits look wrong
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <input
                     type="tel"
@@ -337,8 +346,8 @@ export function AIFoodAnalyser({ onUse }: Props) {
                       if (v.length >= 8) {
                         setDetectedBarcode(v);
                         setDetection('barcode');
-                      } else if (detection === 'barcode' && !imageFile) {
-                        setDetection('none');
+                      } else {
+                        setDetection(imageFile ? 'food' : 'none');
                         setDetectedBarcode(null);
                       }
                     }}
@@ -615,7 +624,14 @@ async function scanBarcodeFromImage(file: File): Promise<string | null> {
           contents: [{
             parts: [
               {
-                text: `Look at this image. If there is a barcode (EAN-13, EAN-8, UPC, Code-128, or any product barcode), read the digits printed below or beside it and return ONLY those digits as a plain number — nothing else, no spaces, no explanation. If there is NO barcode, reply with exactly the word: NONE`,
+                text: `Read the barcode number printed in digits below the barcode bars in this image.
+
+RULES:
+- Read each digit one at a time, left to right
+- EAN-13 has exactly 13 digits; EAN-8 has 8 digits
+- Only return digits you can clearly read from the printed number
+- Return ONLY the digit string, nothing else — no spaces, no dashes, no explanation
+- If you cannot read the digits clearly, return: NONE`,
               },
               { inline_data: { mime_type: mime, data: b64 } },
             ],
