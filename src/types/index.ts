@@ -44,12 +44,18 @@ export type GoalCategory =
 export type GoalStatus = 'active' | 'completed' | 'abandoned';
 
 export type DocumentCategory =
+  | 'lab_report'
+  | 'prescription'
+  | 'scan'
+  | 'doctor_note'
+  | 'discharge_summary'
+  | 'other'
+  // Legacy values kept for backward compatibility
   | 'lab_results'
   | 'imaging'
   | 'prescriptions'
   | 'visit_notes'
-  | 'insurance'
-  | 'other';
+  | 'insurance';
 
 export type AchievementCategory =
   | 'exercise'
@@ -59,20 +65,27 @@ export type AchievementCategory =
   | 'goal'
   | 'other';
 
-export type ShareStatus = 'pending' | 'active' | 'revoked';
+export type ShareStatus = 'pending' | 'active' | 'revoked' | 'expired';
 
 export type SharePermission = 'read' | 'write';
 
 export type ShareResourceType = 'all' | 'documents' | 'timeline' | 'check_ins' | 'goals';
 
-export type DeviceType = 'apple_health' | 'google_fit' | 'fitbit' | 'garmin' | 'other';
+export type DeviceType = 'apple_health' | 'google_fit' | 'fitbit' | 'garmin' | 'samsung_health' | 'other';
+
+export type ConnectionStatus = 'disconnected' | 'connected' | 'syncing' | 'error';
+
+/** Provenance of a health row — null means manually entered by the user. */
+export type SyncSource = 'apple_health' | 'google_fit' | 'fitbit' | 'garmin' | 'samsung_health' | 'other' | null;
 
 export type AuditAction =
   | 'document_upload'
   | 'document_download'
   | 'document_delete'
   | 'share_created'
+  | 'share_accessed'
   | 'share_revoked'
+  | 'share_expired'
   | 'data_export';
 
 // ── Table row types ──────────────────────────────────────────────────
@@ -212,10 +225,17 @@ export interface Food {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  fiber_g: number | null;
   serving_size_g: number | null;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export type FoodInput = Pick<
+  Food,
+  'name' | 'calories_per_100g' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g' | 'serving_size_g' | 'is_favorite'
+>;
 
 export interface Meal {
   id: string;
@@ -233,6 +253,15 @@ export interface FoodLog {
   food_id: string;
   quantity_g: number;
   created_at: string;
+  /** Joined from foods table at query time. */
+  food?: Food;
+}
+
+export type FoodLogInput = Pick<FoodLog, 'food_id' | 'quantity_g'>;
+
+/** A meal with its food logs joined. */
+export interface MealWithLogs extends Meal {
+  food_logs: FoodLog[];
 }
 
 export interface MedicalDocument {
@@ -243,11 +272,21 @@ export interface MedicalDocument {
   mime_type: string;
   file_size: number;
   category: DocumentCategory;
+  document_name: string | null;
+  document_date: string | null;
+  doctor: string | null;
+  hospital_clinic: string | null;
+  notes: string | null;
   description: string | null;
   uploaded_at: string;
   created_at: string;
   updated_at: string;
 }
+
+export type MedicalDocumentInput = Pick<
+  MedicalDocument,
+  'category' | 'document_name' | 'document_date' | 'doctor' | 'hospital_clinic' | 'notes'
+>;
 
 export interface MedicalShare {
   id: string;
@@ -256,10 +295,26 @@ export interface MedicalShare {
   resource_type: ShareResourceType;
   permissions: SharePermission[];
   share_token: string;
+  /** Human-friendly label for the share, e.g. "For Dr. Priya – HbA1c". */
+  label: string | null;
   expires_at: string | null;
   status: ShareStatus;
+  access_count: number;
+  last_accessed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShareDocument {
+  id: string;
+  share_id: string;
+  document_id: string;
+  created_at: string;
+}
+
+/** A share with its associated document IDs joined. */
+export interface MedicalShareWithDocuments extends MedicalShare {
+  share_documents: ShareDocument[];
 }
 
 export interface Device {
@@ -268,6 +323,10 @@ export interface Device {
   device_type: DeviceType;
   device_name: string | null;
   sync_enabled: boolean;
+  connection_status: ConnectionStatus;
+  error_message: string | null;
+  provider_account_id: string | null;
+  scopes: string[] | null;
   last_synced_at: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;

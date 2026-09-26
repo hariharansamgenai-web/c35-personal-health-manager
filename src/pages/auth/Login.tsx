@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Activity, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -68,11 +68,50 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600">
-            <Activity className="h-7 w-7 text-white" />
+          {/* Large heart logo — matches reference */}
+          <div style={{ width:120, height:120, borderRadius:28, background:'#000', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'0 0 48px rgba(139,92,246,.5), 0 0 48px rgba(251,146,60,.4), 0 8px 32px rgba(0,0,0,.8)' }}>
+            <svg width="90" height="84" viewBox="0 0 60 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="lg3" cx="38%" cy="28%" r="65%">
+                  <stop offset="0%"   stopColor="#8b5cf6"/>
+                  <stop offset="35%"  stopColor="#6d28d9"/>
+                  <stop offset="70%"  stopColor="#4338ca"/>
+                  <stop offset="100%" stopColor="#1e3a8a"/>
+                </radialGradient>
+                <radialGradient id="rg3" cx="62%" cy="22%" r="68%">
+                  <stop offset="0%"   stopColor="#fef08a"/>
+                  <stop offset="30%"  stopColor="#fbbf24"/>
+                  <stop offset="65%"  stopColor="#f97316"/>
+                  <stop offset="100%" stopColor="#c2410c"/>
+                </radialGradient>
+                <radialGradient id="mg3" cx="50%" cy="55%" r="70%">
+                  <stop offset="0%"   stopColor="#db2777" stopOpacity="0.95"/>
+                  <stop offset="40%"  stopColor="#9333ea" stopOpacity="0.85"/>
+                  <stop offset="80%"  stopColor="#581c87" stopOpacity="0.75"/>
+                  <stop offset="100%" stopColor="#1c0533" stopOpacity="0.6"/>
+                </radialGradient>
+                <clipPath id="lc3">
+                  <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C22,6 27,9 30,14 L30,48 Z"/>
+                </clipPath>
+                <clipPath id="rc3">
+                  <path d="M30,48 C30,48 56,34 56,19 C56,11 50,6 43,6 C38,6 33,9 30,14 L30,48 Z"/>
+                </clipPath>
+              </defs>
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="#000"/>
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="url(#lg3)" clipPath="url(#lc3)"/>
+              <path d="M30,48 C30,48 4,34 4,19 C4,11 10,6 17,6 C23,6 27,10 30,14 C33,10 37,6 43,6 C50,6 56,11 56,19 C56,34 30,48 30,48 Z" fill="url(#rg3)" clipPath="url(#rc3)"/>
+              <path d="M30,14 C26,19 23,26 23,31 C23,39 26,44 30,48 C34,44 37,39 37,31 C37,26 34,19 30,14 Z" fill="url(#mg3)" opacity="0.9"/>
+            </svg>
           </div>
-          <h1 className="text-xl font-bold text-neutral-900">Personal Health Manager</h1>
-          <p className="mt-1 text-sm text-neutral-500">Sign in to your account</p>
+          {/* Gold gradient wordmark */}
+          <h1 style={{ fontSize:32, fontWeight:900, letterSpacing:'-.04em', lineHeight:1, background:'linear-gradient(135deg, #fde68a 0%, #f59e0b 45%, #d97706 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', marginBottom:4 }}>
+            PulsePath
+          </h1>
+          {/* Gold tagline */}
+          <p style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', background:'linear-gradient(135deg, #fde68a 0%, #f59e0b 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', marginBottom:4 }}>
+            Small habits · Brighter days
+          </p>
+          <p style={{ fontSize:13, color:'#6b7280', marginTop:4 }}>Sign in to your account</p>
         </div>
 
         <div className="card-base space-y-4 p-6">
