@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   AlertCircle, Barcode, Camera, Check, ChevronDown, ChevronUp,
-  Leaf, Loader2, Plus, Sparkles, Type, Beef,
+  Leaf, Loader2, Plus, ScanLine, Sparkles, Type, Beef,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import {
@@ -40,6 +40,9 @@ export function AIFoodAnalyser({ onUse }: Props) {
   const [expanded, setExpanded]     = useState(true);
   const [addedIdx, setAddedIdx]     = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const barcodeFileRef = useRef<HTMLInputElement>(null);
+  const [barcodeImgPreview, setBarcodeImgPreview] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'found' | 'notfound'>('idle');
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -223,13 +226,77 @@ export function AIFoodAnalyser({ onUse }: Props) {
           )}
 
           {mode === 'barcode' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* Camera scan button */}
+              <div>
+                <input
+                  ref={barcodeFileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setBarcodeImgPreview(URL.createObjectURL(f));
+                    setScanStatus('scanning');
+                    const code = await scanBarcodeFromImage(f);
+                    if (code) {
+                      setBarcodeInput(code.replace(/\D/g, ''));
+                      setScanStatus('found');
+                    } else {
+                      setScanStatus('notfound');
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setBarcodeImgPreview(null);
+                    setScanStatus('idle');
+                    barcodeFileRef.current?.click();
+                  }}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed py-5 text-sm font-semibold transition-colors"
+                  style={{ borderColor: 'var(--accent-border)', color: 'var(--accent)', background: 'var(--accent-bg)' }}>
+                  <Camera className="h-5 w-5" />
+                  {scanStatus === 'scanning' ? 'Scanning barcode…' : 'Scan barcode with camera'}
+                </button>
+
+                {/* Scan status feedback */}
+                {scanStatus === 'found' && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--good-bg)', color: 'var(--good-text)' }}>
+                    <Check className="h-4 w-4 shrink-0" />
+                    Barcode detected: <strong>{barcodeInput}</strong> — tap "Look up barcode" to fetch nutrition info.
+                  </div>
+                )}
+                {scanStatus === 'notfound' && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--warn-bg)', color: 'var(--warn-text)' }}>
+                    <ScanLine className="h-4 w-4 shrink-0" />
+                    Couldn't read barcode from photo. Please type the number manually below.
+                  </div>
+                )}
+                {barcodeImgPreview && (
+                  <img src={barcodeImgPreview} alt="Barcode scan preview"
+                    className="mt-2 w-full max-h-32 rounded-lg object-cover" />
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div style={{ flex:1, height:1, background:'var(--border)' }} />
+                <span className="text-xs font-semibold" style={{ color:'var(--text-muted)' }}>or type manually</span>
+                <div style={{ flex:1, height:1, background:'var(--border)' }} />
+              </div>
+
+              {/* Manual entry */}
               <input type="text" style={inputStyle} value={barcodeInput}
-                onChange={e => setBarcodeInput(e.target.value)}
-                placeholder="Enter barcode number (e.g. 8901030925763)"
+                onChange={e => { setBarcodeInput(e.target.value); setScanStatus('idle'); }}
+                placeholder="Barcode number (e.g. 8901030925763)"
                 onKeyDown={e => e.key === 'Enter' && handleAnalyse()} />
+
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Powered by Open Food Facts — covers Amul, Haldiram's, Britannia, Parle, Tata & more.
+                📷 Point camera at barcode on packet · Covers Amul, Haldiram's, Britannia, Parle, Tata & 3M+ Indian products.
                 Indian barcodes start with 890.
               </p>
             </div>
@@ -491,6 +558,51 @@ function MacroGrid({ protein, carbs, fat, fiber }: {
       ))}
     </div>
   );
+}
+
+/**
+ * Scans a barcode from an image file using jsQR (loaded from CDN at runtime).
+ * jsQR reads QR and 1D barcodes from raw pixel data.
+ */
+async function scanBarcodeFromImage(file: File): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+
+      // Try jsQR for QR codes and some 1D barcodes
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const jsQR = (window as any).jsQR;
+      if (jsQR) {
+        const result = jsQR(imageData.data, imageData.width, imageData.height);
+        if (result?.data) { resolve(result.data); return; }
+      }
+
+      // Fallback: try BarcodeDetector API (Chrome 83+, Android)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const BD = (window as any).BarcodeDetector;
+      if (BD) {
+        const detector = new BD({ formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'qr_code'] });
+        createImageBitmap(file).then(bitmap => {
+          detector.detect(bitmap).then((codes: Array<{rawValue: string}>) => {
+            resolve(codes.length > 0 ? codes[0].rawValue : null);
+          }).catch(() => resolve(null));
+        }).catch(() => resolve(null));
+        return;
+      }
+
+      resolve(null);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
 }
 
 async function fileToBase64(file: File): Promise<string> {

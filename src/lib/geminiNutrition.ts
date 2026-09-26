@@ -187,28 +187,12 @@ export async function analyseFoodText(
 // ---------------------------------------------------------------------------
 
 export async function lookupBarcode(barcode: string): Promise<BarcodeResult> {
-  const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'PHM-HealthApp/1.0 (contact@developer.com)' },
+  // Routes through Supabase Edge Function to avoid CORS in browsers/artifacts.
+  // In production: the Edge Function fetches Open Food Facts server-side.
+  const { data, error } = await supabase.functions.invoke('barcode-lookup', {
+    body: { barcode },
   });
-  if (!res.ok) throw new Error(`Open Food Facts returned ${res.status} for barcode ${barcode}.`);
-  const data = await res.json();
-  if (data.status !== 1 || !data.product) throw new Error(`Barcode ${barcode} not found.`);
-
-  const p = data.product;
-  const n = p.nutriments ?? {};
-  return {
-    food_name:          p.product_name || p.product_name_en || 'Unknown product',
-    brand:              p.brands ?? '',
-    calories_per_100g:  n['energy-kcal_100g'] ?? Math.round((n['energy_100g'] ?? 0) / 4.184),
-    protein_g:          n.proteins_100g ?? 0,
-    carbs_g:            n.carbohydrates_100g ?? 0,
-    fat_g:              n.fat_100g ?? 0,
-    fiber_g:            n.fiber_100g ?? 0,
-    sodium_mg_per_100g: (n.sodium_100g ?? 0) * 1000,
-    serving_size_g:     p.serving_quantity ? Number(p.serving_quantity) : 100,
-    image_url:          p.image_front_small_url ?? p.image_url ?? null,
-    is_veg:             p.labels?.toLowerCase().includes('veg') ?? null,
-    nutriscore:         p.nutriscore_grade?.toUpperCase() ?? null,
-  };
+  if (error) throw new Error(error.message ?? `Barcode ${barcode} not found.`);
+  if (!data) throw new Error(`Barcode ${barcode} not found in Open Food Facts database.`);
+  return data as BarcodeResult;
 }
