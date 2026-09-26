@@ -170,6 +170,213 @@ function ActionCard({ icon, color, bg, title, subtitle, action, actionLabel, act
   );
 }
 
+// ─── Calendar booking widget ─────────────────────────────────────────────────
+const APPOINTMENT = {
+  doctor: 'Dr. Priya Nair',
+  specialty: 'Diabetologist',
+  clinic: 'SGH Diabetes Clinic',
+  address: '1 Hospital Drive, Block 7, Singapore 169608',
+  phone: '+65 6222 3322',
+  defaultDate: '2026-10-15',
+  defaultTime: '10:30',
+  duration: 30, // minutes
+};
+
+const TIME_SLOTS = ['09:00','09:30','10:00','10:30','11:00','11:30','14:00','14:30','15:00','15:30','16:00','16:30'];
+
+function AppointmentCard() {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(APPOINTMENT.defaultDate);
+  const [time, setTime] = useState(APPOINTMENT.defaultTime);
+  const [booked, setBooked] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  // Build ICS file content
+  function buildICS() {
+    const [y,mo,d] = date.split('-').map(Number);
+    const [h,mi] = time.split(':').map(Number);
+    const pad = (n:number) => String(n).padStart(2,'0');
+    const dtStart = `${y}${pad(mo)}${pad(d)}T${pad(h)}${pad(mi)}00`;
+    const endMin = mi + APPOINTMENT.duration;
+    const endH = h + Math.floor(endMin/60);
+    const dtEnd = `${y}${pad(mo)}${pad(d)}T${pad(endH)}${pad(endMin%60)}00`;
+    return [
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PulsePath//Health//EN',
+      'BEGIN:VEVENT',
+      `UID:${Date.now()}@pulsepath.app`,
+      `DTSTAMP:${dtStart}Z`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
+      `SUMMARY:Appointment with ${APPOINTMENT.doctor}`,
+      `DESCRIPTION:${APPOINTMENT.specialty} visit\n${APPOINTMENT.clinic}\nPhone: ${APPOINTMENT.phone}`,
+      `LOCATION:${APPOINTMENT.address}`,
+      'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY',
+      `DESCRIPTION:Reminder: ${APPOINTMENT.doctor} in 1 hour`,
+      'END:VALARM',
+      'END:VEVENT','END:VCALENDAR'
+    ].join('\r\n');
+  }
+
+  function downloadICS() {
+    const blob = new Blob([buildICS()], { type:'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url;
+    a.download = `appointment-dr-priya-nair.ics`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function googleCalendarUrl() {
+    const [y,mo,d] = date.split('-').map(Number);
+    const [h,mi] = time.split(':').map(Number);
+    const pad = (n:number) => String(n).padStart(2,'0');
+    const dtStart = `${y}${pad(mo)}${pad(d)}T${pad(h)}${pad(mi)}00`;
+    const endMin = mi + APPOINTMENT.duration;
+    const endH = h + Math.floor(endMin/60);
+    const dtEnd = `${y}${pad(mo)}${pad(d)}T${pad(endH)}${pad(endMin%60)}00`;
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `Appointment with ${APPOINTMENT.doctor}`,
+      dates: `${dtStart}/${dtEnd}`,
+      details: `${APPOINTMENT.specialty} visit\n${APPOINTMENT.clinic}\nPhone: ${APPOINTMENT.phone}`,
+      location: APPOINTMENT.address,
+    });
+    return `https://calendar.google.com/calendar/render?${params}`;
+  }
+
+  function handleBook() {
+    setAdding(true);
+    setTimeout(() => { setAdding(false); setBooked(true); setOpen(false); }, 900);
+  }
+
+  const displayDate = date ? new Date(date+'T12:00:00').toLocaleDateString('en-SG',{ weekday:'short',day:'numeric',month:'long',year:'numeric' }) : '';
+
+  if (booked) return (
+    <div style={{ display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:14,background:'rgba(16,185,129,.06)',border:'1px solid rgba(16,185,129,.3)' }}>
+      <div style={{ width:40,height:40,borderRadius:10,background:'rgba(16,185,129,.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+        <CheckCircle2 style={{ width:20,height:20,color:'#10b981' }}/>
+      </div>
+      <div style={{ flex:1,minWidth:0 }}>
+        <p style={{ fontSize:13,fontWeight:700,color:'#10b981' }}>Appointment confirmed ✓</p>
+        <p style={{ fontSize:11,color:'var(--text-muted)',marginTop:1 }}>{APPOINTMENT.doctor} · {displayDate} · {time} · {APPOINTMENT.clinic}</p>
+      </div>
+      <div style={{ display:'flex',gap:6,flexShrink:0 }}>
+        <button onClick={downloadICS} title="Download .ics" style={{ padding:'5px 10px',borderRadius:8,border:'1px solid rgba(16,185,129,.3)',background:'rgba(16,185,129,.1)',color:'#10b981',fontSize:11,fontWeight:600,cursor:'pointer' }}>
+          ⬇ .ics
+        </button>
+        <a href={googleCalendarUrl()} target="_blank" rel="noopener noreferrer"
+          style={{ padding:'5px 10px',borderRadius:8,border:'1px solid rgba(66,133,244,.3)',background:'rgba(66,133,244,.1)',color:'#4285f4',fontSize:11,fontWeight:600,cursor:'pointer',textDecoration:'none',display:'flex',alignItems:'center',gap:4 }}>
+          📅 Google
+        </a>
+        <button onClick={()=>{ setBooked(false); setOpen(true); }} style={{ padding:'5px 8px',borderRadius:8,border:'1px solid var(--border)',background:'transparent',color:'var(--text-muted)',fontSize:11,cursor:'pointer' }}>
+          Reschedule
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ borderRadius:14,border:`1px solid ${open?'rgba(167,139,250,.4)':'var(--border)'}`,overflow:'hidden',transition:'border-color .2s' }}>
+      {/* Header row */}
+      <div style={{ display:'flex',alignItems:'center',gap:12,padding:'12px 14px',background:'rgba(167,139,250,.05)' }}>
+        <div style={{ width:40,height:40,borderRadius:10,background:'rgba(167,139,250,.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+          <Clock style={{ width:18,height:18,color:'#a78bfa' }}/>
+        </div>
+        <div style={{ flex:1,minWidth:0 }}>
+          <p style={{ fontSize:13,fontWeight:700,color:'var(--text-primary)' }}>
+            Next appointment · {APPOINTMENT.doctor}
+          </p>
+          <p style={{ fontSize:11,color:'var(--text-muted)',marginTop:1 }}>
+            {APPOINTMENT.clinic} · {new Date(APPOINTMENT.defaultDate+'T12:00:00').toLocaleDateString('en-SG',{ day:'numeric',month:'short',year:'numeric' })} · {APPOINTMENT.defaultTime}
+          </p>
+        </div>
+        <button onClick={()=>setOpen(o=>!o)} style={{
+          padding:'6px 14px',borderRadius:8,border:'1px solid rgba(167,139,250,.4)',
+          background: open ? '#a78bfa' : 'rgba(167,139,250,.15)',
+          color: open ? '#fff' : '#a78bfa',
+          fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0,transition:'all .2s',
+        }}>
+          {open ? '✕ Close' : '📅 Book / reschedule'}
+        </button>
+      </div>
+
+      {/* Expanded booking panel */}
+      {open && (
+        <div style={{ padding:'16px 14px',background:'var(--bg-card)',borderTop:'1px solid var(--border)' }}>
+          {/* Doctor info */}
+          <div style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.15)',marginBottom:14 }}>
+            <div style={{ width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#a78bfa,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:14,fontWeight:800,color:'#fff' }}>P</div>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:13,fontWeight:700,color:'var(--text-primary)' }}>{APPOINTMENT.doctor}</p>
+              <p style={{ fontSize:11,color:'var(--text-muted)' }}>{APPOINTMENT.specialty} · {APPOINTMENT.clinic}</p>
+              <p style={{ fontSize:10,color:'var(--text-muted)' }}>{APPOINTMENT.address}</p>
+            </div>
+            <a href={`tel:${APPOINTMENT.phone}`} style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 10px',borderRadius:8,background:'rgba(167,139,250,.12)',border:'1px solid rgba(167,139,250,.25)',color:'#a78bfa',textDecoration:'none',fontSize:11,fontWeight:600,flexShrink:0 }}>
+              <Phone style={{ width:12,height:12 }}/> Call clinic
+            </a>
+          </div>
+
+          {/* Date + Time pickers */}
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14 }}>
+            <div>
+              <label style={{ fontSize:10,fontWeight:700,color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',display:'block',marginBottom:6 }}>Date</label>
+              <input type="date" value={date} min={new Date().toISOString().slice(0,10)}
+                onChange={e=>setDate(e.target.value)}
+                style={{ width:'100%',padding:'9px 12px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-input)',color:'var(--text-primary)',fontSize:13,outline:'none' }}/>
+            </div>
+            <div>
+              <label style={{ fontSize:10,fontWeight:700,color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',display:'block',marginBottom:6 }}>Time slot</label>
+              <select value={time} onChange={e=>setTime(e.target.value)}
+                style={{ width:'100%',padding:'9px 12px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg-input)',color:'var(--text-primary)',fontSize:13,outline:'none' }}>
+                {TIME_SLOTS.map(t=><option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Time slot quick picks */}
+          <p style={{ fontSize:10,fontWeight:700,color:'var(--text-muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:8 }}>Quick pick a slot</p>
+          <div style={{ display:'flex',flexWrap:'wrap',gap:6,marginBottom:14 }}>
+            {TIME_SLOTS.map(t=>(
+              <button key={t} onClick={()=>setTime(t)} style={{
+                padding:'5px 10px',borderRadius:8,border:`1px solid ${time===t?'#a78bfa':'var(--border)'}`,
+                background:time===t?'rgba(167,139,250,.2)':'transparent',
+                color:time===t?'#a78bfa':'var(--text-muted)',
+                fontSize:11,fontWeight:time===t?700:500,cursor:'pointer',transition:'all .15s',
+              }}>{t}</button>
+            ))}
+          </div>
+
+          {/* Confirmation summary */}
+          {date && time && (
+            <div style={{ padding:'10px 12px',borderRadius:10,background:'rgba(167,139,250,.08)',border:'1px solid rgba(167,139,250,.2)',marginBottom:12 }}>
+              <p style={{ fontSize:12,fontWeight:600,color:'#a78bfa' }}>
+                📋 {APPOINTMENT.doctor} · {displayDate} at {time} ({APPOINTMENT.duration} min)
+              </p>
+              <p style={{ fontSize:11,color:'var(--text-muted)',marginTop:3 }}>{APPOINTMENT.clinic} · Reminder set 1 hour before</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8 }}>
+            <button onClick={handleBook} disabled={!date||!time||adding}
+              style={{ padding:'10px',borderRadius:10,border:'none',background:'#a78bfa',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',opacity:adding?.7:1 }}>
+              {adding?'Saving…':'✓ Confirm'}
+            </button>
+            <button onClick={downloadICS} disabled={!date||!time}
+              style={{ padding:'10px',borderRadius:10,border:'1px solid var(--border)',background:'transparent',color:'var(--text-secondary)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5 }}>
+              ⬇ Download .ics
+            </button>
+            <a href={googleCalendarUrl()} target="_blank" rel="noopener noreferrer"
+              style={{ padding:'10px',borderRadius:10,border:'1px solid rgba(66,133,244,.35)',background:'rgba(66,133,244,.08)',color:'#4285f4',fontSize:12,fontWeight:600,cursor:'pointer',textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5 }}>
+              📅 Google Cal
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
   const { activeProfile } = useActiveProfile();
@@ -369,14 +576,7 @@ export function DashboardPage() {
               action={()=>navigate('/documents')}
               actionLabel="View prescription"
             />
-            <ActionCard
-              icon={<Clock style={{ width:18,height:18,color:'#a78bfa' }}/>}
-              color="#a78bfa" bg="rgba(167,139,250,.05)"
-              title="Next appointment · Dr. Priya Nair"
-              subtitle="SGH Diabetes Clinic · 15 Oct 2026 · 10:30 AM"
-              action={()=>{}}
-              actionLabel="Add to calendar"
-            />
+            <AppointmentCard />
           </div>
         </div>
 
