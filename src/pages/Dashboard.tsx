@@ -1,422 +1,702 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Activity, Award, Database, Droplet, FileText,
-  HeartPulse, Moon, Sparkles, Target, TrendingDown, TrendingUp,
+  Activity, AlertTriangle, Bell, BellRing, Brain, CheckCircle2,
+  ChevronRight, Clock, Droplet, FileText, HeartPulse,
+  Moon, Phone, Plus, Sparkles, Target, TrendingDown, TrendingUp,
+  Users, Watch, X, Zap,
 } from 'lucide-react';
 import { useActiveProfile } from '@/context/ActiveProfileContext';
-import { Card, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/feedback/Loading';
 import { ErrorState } from '@/components/feedback/ErrorState';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { AlertList } from '@/components/dashboard/AlertList';
-import { StatTile } from '@/components/dashboard/StatTile';
-import { MiniBars } from '@/components/dashboard/MiniBars';
 import { GlucoseChart } from '@/components/health/GlucoseChart';
+
 import { useCheckIns } from '@/hooks/useCheckIns';
 import { useGoals } from '@/hooks/useGoals';
-import { useActivities } from '@/hooks/useActivities';
 import { loadDemoData } from '@/lib/checkins';
-import { computeGoalProgress, GOAL_CATEGORY_LABELS } from '@/lib/goals';
-import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
   GLUCOSE, SLEEP_GOAL_HOURS, STEP_GOAL, WATER_GOAL_ML,
   addDays, computeStats, dateRange, evaluateAlerts, findInsights,
-  inWindow, loggingStreak, longDate, todayISO,
+  inWindow, loggingStreak, todayISO,
 } from '@/lib/health';
 
+// ─── Emergency modal ────────────────────────────────────────────────────────
+const FAMILY_CONTACTS = [
+  { name: 'Shirpi (Partner)', relation: 'Partner', phone: '+6591234567', avatar: 'S' },
+  { name: 'Amma',             relation: 'Mother',  phone: '+919876543210', avatar: 'A' },
+  { name: 'Dr. Priya Nair',  relation: 'Doctor',  phone: '+6562345678', avatar: 'P' },
+];
+
+function EmergencyModal({ onClose }: { onClose: () => void }) {
+  const [called, setCalled] = useState<string[]>([]);
+  const [countdown, setCountdown] = useState(5);
+  const [autoSent, setAutoSent] = useState(false);
+
+  // 5-second auto-cancel countdown
+  useMemo(() => {
+    if (autoSent) return;
+    const t = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) {
+          clearInterval(t);
+          setAutoSent(true);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [autoSent]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 420, borderRadius: 20, overflow: 'hidden',
+          background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,.4)',
+          boxShadow: '0 0 60px rgba(239,68,68,.25)',
+        }}
+      >
+        {/* Red header */}
+        <div style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', padding: '20px 24px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: '50%',
+                background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <BellRing style={{ width: 22, height: 22, color: '#fff' }} className="animate-pulse" />
+              </div>
+              <div>
+                <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-.02em' }}>
+                  Emergency Alert
+                </p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', marginTop: 2 }}>
+                  {autoSent ? 'Alert sent to all contacts' : `Auto-sending in ${countdown}s`}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ color: 'rgba(255,255,255,.6)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+              <X style={{ width: 20, height: 20 }} />
+            </button>
+          </div>
+          {/* Progress bar */}
+          {!autoSent && (
+            <div style={{ marginTop: 14, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.2)' }}>
+              <div style={{
+                height: '100%', borderRadius: 2, background: '#fff',
+                width: `${((5 - countdown) / 5) * 100}%`,
+                transition: 'width 1s linear',
+              }} />
+            </div>
+          )}
+        </div>
+
+        {/* Contacts */}
+        <div style={{ padding: '16px 20px 20px' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+            Call family &amp; care team
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {FAMILY_CONTACTS.map(c => {
+              const wasCalled = called.includes(c.phone);
+              return (
+                <a
+                  key={c.phone}
+                  href={`tel:${c.phone}`}
+                  onClick={() => setCalled(p => [...p, c.phone])}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 14px', borderRadius: 12, textDecoration: 'none',
+                    background: wasCalled ? 'var(--good-bg)' : 'var(--bg-card-2,var(--bg-card))',
+                    border: `1px solid ${wasCalled ? 'rgba(16,185,129,.3)' : 'var(--border)'}`,
+                    transition: 'all .2s',
+                  }}
+                >
+                  <div style={{
+                    width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                    background: wasCalled ? 'var(--good)' : '#dc2626',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 700, color: '#fff',
+                  }}>{wasCalled ? '✓' : c.avatar}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.relation} · {c.phone}</p>
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
+                    color: wasCalled ? 'var(--good-text)' : '#dc2626',
+                  }}>
+                    <Phone style={{ width: 14, height: 14 }} />
+                    {wasCalled ? 'Called' : 'Call now'}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+
+          {/* SMS all button */}
+          <button
+            onClick={() => {
+              setCalled(FAMILY_CONTACTS.map(c => c.phone));
+            }}
+            style={{
+              marginTop: 12, width: '100%', padding: '10px',
+              borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: '#dc2626', color: '#fff',
+              fontSize: 13, fontWeight: 700, letterSpacing: '.02em',
+            }}
+          >
+            🚨 Alert all contacts — I need help
+          </button>
+          <button onClick={onClose} style={{
+            marginTop: 8, width: '100%', padding: '8px',
+            borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer',
+            background: 'transparent', color: 'var(--text-secondary)', fontSize: 13,
+          }}>
+            I'm OK — Cancel alert
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Attention card ──────────────────────────────────────────────────────────
+function AttentionCard({
+  icon, color, bg, title, subtitle, action, actionLabel,
+}: {
+  icon: React.ReactNode; color: string; bg: string;
+  title: string; subtitle: string; action: () => void; actionLabel: string;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+      borderRadius: 14, border: `1px solid ${color}33`, background: bg,
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 10, background: `${color}22`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</p>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{subtitle}</p>
+      </div>
+      <button onClick={action} style={{
+        padding: '5px 11px', borderRadius: 8, border: `1px solid ${color}44`,
+        background: `${color}18`, color, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+      }}>
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
+// ─── Habit ring ──────────────────────────────────────────────────────────────
+function HabitRing({
+  label, value, max, unit, color, sublabel,
+}: { label: string; value: number | null; max: number; unit: string; color: string; sublabel?: string }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const pct = value !== null ? Math.min(value / max, 1) : 0;
+  const dash = circ * pct;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+      <div style={{ position: 'relative', width: 72, height: 72 }}>
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r={r} fill="none" stroke={`${color}22`} strokeWidth="7"/>
+          <circle cx="36" cy="36" r={r} fill="none" stroke={color} strokeWidth="7"
+            strokeDasharray={`${dash} ${circ - dash}`}
+            strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+            style={{ transition: 'stroke-dasharray .6s ease' }}
+          />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color, lineHeight: 1, letterSpacing: '-.02em' }}>
+            {value !== null ? (unit === 'h' ? value.toFixed(1) : Math.round(value).toLocaleString()) : '–'}
+          </p>
+          <p style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 1 }}>{unit}</p>
+        </div>
+      </div>
+      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center' }}>{label}</p>
+      {sublabel && <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: -4 }}>{sublabel}</p>}
+    </div>
+  );
+}
+
+// ─── KPI tile ────────────────────────────────────────────────────────────────
+function KpiTile({ label, value, unit, tone, note }: {
+  label: string; value: string; unit: string; tone: 'good' | 'warn' | 'danger' | 'neutral'; note?: React.ReactNode;
+}) {
+  const colors = { good: '#10b981', warn: '#f59e0b', danger: '#ef4444', neutral: 'var(--accent)' };
+  const bgs    = { good: 'rgba(16,185,129,.08)', warn: 'rgba(245,158,11,.08)', danger: 'rgba(239,68,68,.08)', neutral: 'var(--accent-bg)' };
+  const c = colors[tone]; const bg = bgs[tone];
+  return (
+    <div style={{
+      padding: '14px 16px', borderRadius: 16, background: bg,
+      border: `1px solid ${c}33`,
+      borderTop: `3px solid ${c}`,
+    }}>
+      <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>{label}</p>
+      <p style={{ fontSize: 30, fontWeight: 800, color: c, letterSpacing: '-.04em', lineHeight: 1 }}>
+        {value}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 3, color: 'var(--text-muted)' }}>{unit}</span>
+      </p>
+      {note && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>{note}</p>}
+    </div>
+  );
+}
+
+// ─── Main page ───────────────────────────────────────────────────────────────
 export function DashboardPage() {
   const { activeProfile } = useActiveProfile();
   const navigate = useNavigate();
   const { checkIns, loading, error, reload } = useCheckIns(activeProfile?.id, 14);
   const { goals } = useGoals(activeProfile?.id);
-  const { activities } = useActivities(activeProfile?.id, 7);
   const [seeding, setSeeding] = useState(false);
-  const [seedError, setSeedError] = useState<string | null>(null);
+  const [showEmergency, setShowEmergency] = useState(false);
 
   const today = todayISO();
   const days = useMemo(() => dateRange(today, 7), [today]);
 
   const view = useMemo(() => {
-    const week = inWindow(checkIns, today, 7);
+    const week     = inWindow(checkIns, today, 7);
     const previous = inWindow(checkIns, addDays(today, -7), 7);
     return {
-      week,
-      previous,
-      stats: computeStats(week),
-      prevStats: computeStats(previous),
-      alerts: evaluateAlerts(checkIns, today),
-      insights: findInsights(week, previous),
-      streak: loggingStreak(checkIns, today),
-      todayEntry: checkIns.find((c) => c.date === today) ?? null,
+      week, previous,
+      stats:     computeStats(week),
+      prevStats:  computeStats(previous),
+      alerts:    evaluateAlerts(checkIns, today),
+      insights:  findInsights(week, previous),
+      streak:    loggingStreak(checkIns, today),
+      todayEntry: checkIns.find(c => c.date === today) ?? null,
     };
   }, [checkIns, today]);
-
-  async function handleDemo() {
-    if (!activeProfile) return;
-    setSeeding(true);
-    setSeedError(null);
-    try {
-      await loadDemoData(activeProfile.id);
-      await reload();
-    } catch (e) {
-      setSeedError(e instanceof Error ? e.message : 'Could not load demo data.');
-    } finally {
-      setSeeding(false);
-    }
-  }
 
   if (!activeProfile) return <Loading label="Loading profile" />;
   if (loading && checkIns.length === 0) return <Loading label="Loading dashboard" />;
   if (error) return <ErrorState message={error} onRetry={reload} />;
 
   const name = activeProfile.display_name;
-
-  if (checkIns.length === 0) {
-    return (
-      <div className="space-y-6">
-        <Heading name={name} todayLogged={false} />
-        <EmptyState
-          icon={<HeartPulse className="h-6 w-6" />}
-          title="Start with today's check-in"
-          description="Log medication, blood sugar and a few habits. After a few days your trends, alerts and coach notes appear here."
-          action={
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button onClick={() => navigate('/check-ins')}>Log today</Button>
-              <Button variant="outline" loading={seeding} onClick={handleDemo}>
-                <Database className="h-4 w-4" />
-                Load 14 days of demo data
-              </Button>
-            </div>
-          }
-        />
-        {seedError && <p className="text-center text-sm" style={{ color: 'var(--danger)' }}>{seedError}</p>}
-      </div>
-    );
-  }
-
   const { stats, prevStats, alerts, insights, streak, todayEntry, week } = view;
   const fastingDiff = stats.avgFasting !== null && prevStats.avgFasting !== null
     ? stats.avgFasting - prevStats.avgFasting : null;
 
-  const activeGoals = goals.filter((g) => g.status === 'active');
-
-  return (
-    <div className="space-y-5">
-      {/* Header row — dash-hero gives animated gradient bg */}
-      <div className="dash-hero flex flex-wrap items-end justify-between gap-4 rounded-2xl px-5 py-4 -mx-1" style={{ border: '1px solid var(--border)' }}>
-        <Heading name={name} todayLogged={!!todayEntry} />
-        {todayEntry ? (
-          <Link
-            to="/check-ins"
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold"
-            style={{ background: 'var(--good-bg)', color: 'var(--good-text)' }}
-          >
-            <span className="status-dot" style={{ background: "var(--good)", marginRight: 2 }} />
-            Today is logged · Edit
-          </Link>
-        ) : (
-          <Button onClick={() => navigate('/check-ins')}>Log today</Button>
-        )}
-      </div>
-
-      {/* Alert rail */}
-      {alerts.length > 0 && <AlertList alerts={alerts} />}
-
-      {/* KPI row — 4 stat tiles with coloured top-stripe */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          label="Fasting sugar · 7-day avg"
-          value={stats.avgFasting === null ? '–' : Math.round(stats.avgFasting).toString()}
-          unit="mg/dL"
-          tone={stats.avgFasting === null ? 'neutral' : stats.avgFasting <= GLUCOSE.FASTING_MAX ? 'good' : 'watch'}
-          note={
-            fastingDiff === null ? `Target ${GLUCOSE.FASTING_MIN}–${GLUCOSE.FASTING_MAX}` : (
-              <span className="inline-flex items-center gap-1">
-                {fastingDiff <= 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-                {Math.abs(Math.round(fastingDiff))} vs last week
-              </span>
-            )
-          }
-        />
-        <StatTile
-          label="Readings in range"
-          value={stats.timeInRange === null ? '–' : Math.round(stats.timeInRange).toString()}
-          unit="%"
-          tone={stats.timeInRange === null ? 'neutral' : stats.timeInRange >= 70 ? 'good' : 'watch'}
-          note="70–180 mg/dL"
-        />
-        <StatTile
-          label="Medication taken"
-          value={stats.adherence === null ? '–' : Math.round(stats.adherence).toString()}
-          unit="%"
-          tone={stats.adherence === null ? 'neutral' : stats.adherence >= 85 ? 'good' : 'watch'}
-          note="of logged days this week"
-        />
-        <StatTile
-          label="Logging streak"
-          value={streak.toString()}
-          unit={streak === 1 ? 'day' : 'days'}
-          tone={streak >= 5 ? 'good' : 'neutral'}
-          note={`${stats.loggedDays} of 7 days logged`}
-        />
-      </div>
-
-      {/* Main 2-col: glucose chart + coach notes */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader title="Blood sugar · last 7 days" subtitle="Red markers are below 70 or above 250 mg/dL" className="mb-4" />
-          {week.some((c) => c.glucose_fasting !== null || c.glucose_post_meal !== null) ? (
-            <GlucoseChart days={days} checkIns={week} />
-          ) : (
-            <p className="py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No blood-sugar readings this week yet.</p>
-          )}
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader title="Coach notes" subtitle="Patterns from your logs" className="mb-4" />
-          {insights.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Patterns appear once there are a few days of readings, sleep and steps to compare.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {insights.slice(0, 4).map((i) => (
-                <li key={i.text} className="flex gap-2.5 text-sm leading-snug" style={{ color: 'var(--text-secondary)' }}>
-                  <span
-                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: i.tone === 'positive' ? 'var(--good)' : 'var(--warn)' }}
-                    aria-hidden
-                  />
-                  {i.text}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link
-            to="/ai-summary"
-            className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold"
-            style={{ color: 'var(--accent)' }}
-          >
-            <Sparkles className="h-4 w-4" />
-            Generate AI summary
-          </Link>
-        </Card>
-      </div>
-
-      {/* Habit row: Steps / Water / Sleep / Weight */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <HabitCard
-          title="Steps"
-          icon={<Activity className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
-          value={stats.avgSteps === null ? null : Math.round(stats.avgSteps)}
-          unit="avg/day"
-          goal={STEP_GOAL}
-          goalLabel={`Goal ${STEP_GOAL.toLocaleString()}`}
-        >
-          <MiniBars days={days} checkIns={week} field="steps" goal={STEP_GOAL} color="secondary" format={(v) => `${v.toLocaleString()} steps`} />
-        </HabitCard>
-
-        <HabitCard
-          title="Water"
-          icon={<Droplet className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
-          value={stats.avgWater === null ? null : Math.round(stats.avgWater)}
-          unit="ml avg/day"
-          goal={WATER_GOAL_ML}
-          goalLabel={`Goal ${(WATER_GOAL_ML / 1000).toFixed(1)} L`}
-        >
-          <MiniBars days={days} checkIns={week} field="water_ml" goal={WATER_GOAL_ML} color="primary" format={(v) => `${v} ml`} />
-        </HabitCard>
-
-        <HabitCard
-          title="Sleep"
-          icon={<Moon className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
-          value={stats.avgSleep === null ? null : stats.avgSleep}
-          unit="h avg/night"
-          goal={SLEEP_GOAL_HOURS}
-          goalLabel={`Goal ${SLEEP_GOAL_HOURS} h`}
-          decimals={1}
-        >
-          <MiniBars days={days} checkIns={week} field="sleep_hours" goal={SLEEP_GOAL_HOURS} color="accent" format={(v) => `${v} h`} />
-        </HabitCard>
-
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Weight</p>
-          </div>
-          {stats.latestWeight === null ? (
-            <p className="py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Log your weight to see the trend.</p>
-          ) : (
-            <>
-              <p className="text-4xl font-bold tabular-nums" style={{ color: 'var(--text-primary)', letterSpacing: '-.03em' }}>
-                {stats.latestWeight.toFixed(1)}
-                <span className="text-base font-medium ml-1" style={{ color: 'var(--text-muted)' }}>kg</span>
-              </p>
-              <p className="mt-2 text-xs" style={{ color: stats.weightChange && stats.weightChange < 0 ? 'var(--good)' : 'var(--text-muted)' }}>
-                {stats.weightChange === null || stats.weightChange === 0
-                  ? 'No change this week'
-                  : stats.weightChange > 0
-                    ? `↑ Up ${stats.weightChange.toFixed(1)} kg this week`
-                    : `↓ Down ${Math.abs(stats.weightChange).toFixed(1)} kg this week`}
-              </p>
-            </>
-          )}
-        </Card>
-      </div>
-
-      {/* Bottom row: Goals + Recent check-ins + Records + Achievements */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Goals */}
-        <Card>
-          <CardHeader
-            title="Goals"
-            subtitle="Active targets · tracked from real data"
-            className="mb-4"
-            action={<Target className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />}
-          />
-          {activeGoals.length === 0 ? (
-            <EmptyState
-              icon={<Target className="h-5 w-5" />}
-              title="No goals yet"
-              description="Set a target like 8,000 steps a day to see progress here."
-              action={<Button variant="outline" onClick={() => navigate('/goals')}>Open Goals</Button>}
-            />
-          ) : (
-            <div className="space-y-4">
-              {activeGoals.slice(0, 3).map((g) => {
-                const progress = computeGoalProgress(g, checkIns, activities);
-                return (
-                  <div key={g.id}>
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{g.title}</span>
-                      <span className="pill pill-good shrink-0">{GOAL_CATEGORY_LABELS[g.category]}</span>
-                    </div>
-                    {progress.measurable ? (
-                      <ProgressBar value={progress.value ?? 0} max={progress.target ?? 1} />
-                    ) : (
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Tracked manually</p>
-                    )}
-                  </div>
-                );
-              })}
-              <Link to="/goals" className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
-                See all goals →
-              </Link>
-            </div>
-          )}
-        </Card>
-
-        {/* Recent check-ins */}
-        <Card>
-          <CardHeader title="Recent check-ins" subtitle="Your last three entries" className="mb-4" />
-          {week.length === 0 ? (
-            <p className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No check-ins this week yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {[...week].reverse().slice(0, 3).map((c) => (
-                <li
-                  key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2"
-                  style={{ border: '1px solid var(--border)', background: 'var(--bg-card-2, var(--bg-card))' }}
-                >
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{longDate(c.date)}</span>
-                  <span className="flex flex-wrap gap-1.5">
-                    {c.glucose_fasting !== null && (
-                      <span className="pill" style={{ background: 'var(--accent-bg)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
-                        F {c.glucose_fasting}
-                      </span>
-                    )}
-                    {c.glucose_post_meal !== null && (
-                      <span className="pill" style={{ background: 'var(--warn-bg)', color: 'var(--warn-text)', border: '1px solid rgba(245,158,11,.2)' }}>
-                        P {c.glucose_post_meal}
-                      </span>
-                    )}
-                    {c.steps !== null && (
-                      <span className="pill" style={{ background: 'var(--bg-card-2, var(--bg-card))', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                        {c.steps.toLocaleString()} steps
-                      </span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link to="/check-ins" className="mt-4 inline-block text-sm font-semibold" style={{ color: 'var(--accent)' }}>
-            See all check-ins →
-          </Link>
-        </Card>
-
-        <Card>
-          <CardHeader title="Recent medical records" className="mb-4" action={<FileText className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />} />
-          <EmptyState
-            icon={<FileText className="h-5 w-5" />}
-            title="No records uploaded"
-            description="Upload lab reports, prescriptions and scans in Health Vault."
-          />
-        </Card>
-
-        <Card>
-          <CardHeader title="Achievements" className="mb-4" action={<Award className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />} />
-          <EmptyState
-            icon={<Award className="h-5 w-5" />}
-            title="Badges will appear here"
-            description="Streaks and goal completions are awarded as you keep logging."
-          />
-        </Card>
-      </div>
-
-      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-        Targets are common defaults for adults with Type 2 Diabetes. Your doctor may set different ones. This app does not replace medical advice.
-      </p>
-    </div>
-  );
-}
-
-function Heading({ name, todayLogged }: { name: string; todayLogged: boolean }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  return (
-    <div>
-      <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-.02em' }}>
-        {greeting}, {name}
-      </h2>
-      <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-        {todayLogged ? 'All caught up · blood sugar, medication and habits for the past week.' : 'Blood sugar, medication and habits for the past week.'}
-      </p>
-    </div>
-  );
-}
 
-function HabitCard({
-  title, icon, value, unit, goal, goalLabel, decimals = 0, children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  value: number | null;
-  unit: string;
-  goal: number;
-  goalLabel: string;
-  decimals?: number;
-  children: React.ReactNode;
-}) {
-  const pct = value !== null ? Math.round((value / goal) * 100) : null;
-  const tone = pct === null ? 'neutral' : pct >= 100 ? 'good' : pct >= 70 ? 'warn' : 'neutral';
-  const valColor = tone === 'good' ? 'var(--good)' : tone === 'warn' ? 'var(--warn)' : 'var(--text-primary)';
+  // Today at-a-glance values
+  const todayMeds  = todayEntry?.meds_taken;
+  const todaySteps = todayEntry?.steps ?? null;
+  const todayWater = todayEntry?.water_ml ?? null;
+  const todaySleep = todayEntry?.sleep_hours ?? null;
+
+  // Attention items
+  const attentionItems = [
+    todayMeds === false && {
+      icon: <HeartPulse style={{ width: 18, height: 18, color: '#ef4444' }} />,
+      color: '#ef4444', bg: 'rgba(239,68,68,.05)',
+      title: 'Medication due', subtitle: 'Evening dose not logged',
+      action: () => navigate('/check-ins'), actionLabel: 'Log dose',
+    },
+    (todayWater !== null && todayWater < WATER_GOAL_ML * 0.7) && {
+      icon: <Droplet style={{ width: 18, height: 18, color: '#0ea5e9' }} />,
+      color: '#0ea5e9', bg: 'rgba(14,165,233,.05)',
+      title: 'Hydration low', subtitle: `${(WATER_GOAL_ML - (todayWater ?? 0)).toLocaleString()} ml remaining`,
+      action: () => navigate('/check-ins'), actionLabel: 'Add water',
+    },
+    (todaySleep !== null && todaySleep < SLEEP_GOAL_HOURS * 0.85) && {
+      icon: <Moon style={{ width: 18, height: 18, color: '#a78bfa' }} />,
+      color: '#a78bfa', bg: 'rgba(167,139,250,.05)',
+      title: 'Sleep below goal', subtitle: `Logged ${todaySleep?.toFixed(1)}h, goal is ${SLEEP_GOAL_HOURS}h`,
+      action: () => navigate('/check-ins'), actionLabel: 'View',
+    },
+  ].filter(Boolean) as Array<{
+    icon: React.ReactNode; color: string; bg: string;
+    title: string; subtitle: string; action: () => void; actionLabel: string;
+  }>;
+
+  const onTrack = 5 - attentionItems.length; // simplified
+
+  const trendTone = fastingDiff === null ? 'neutral'
+    : fastingDiff <= -5 ? 'good'
+    : fastingDiff <= 5  ? 'neutral'
+    : 'warn';
+
+  const hasData = checkIns.length > 0;
 
   return (
-    <Card>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{title}</p>
-        {icon}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
+        background: 'linear-gradient(135deg,rgba(13,148,136,.12) 0%,rgba(14,165,233,.06) 100%)',
+        borderRadius: 20, padding: '18px 20px',
+        border: '1px solid var(--border)',
+      }}>
+        <div>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>{greeting}</p>
+          <h2 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-.03em', lineHeight: 1.1, marginTop: 2 }}>
+            {name} 👋
+          </h2>
+          {todayEntry ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <CheckCircle2 style={{ width: 14, height: 14, color: '#10b981' }} />
+              <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>Today logged</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {streak} day streak 🔥</span>
+            </div>
+          ) : (
+            <button onClick={() => navigate('/check-ins')} style={{
+              marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 10, background: '#0d9488', color: '#fff',
+              fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
+            }}>
+              <Plus style={{ width: 13, height: 13 }} />
+              Log today's check-in
+            </button>
+          )}
+        </div>
+
+        {/* Emergency bell */}
+        <button
+          onClick={() => setShowEmergency(true)}
+          title="Emergency — alert family"
+          style={{
+            width: 52, height: 52, borderRadius: 16, border: '2px solid rgba(239,68,68,.4)',
+            background: 'rgba(239,68,68,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0, transition: 'all .2s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,.2)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,.1)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,.4)';
+          }}
+        >
+          <Bell style={{ width: 22, height: 22, color: '#ef4444' }} />
+        </button>
       </div>
-      <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{goalLabel}</p>
-      {value !== null && (
-        <p className="text-sm font-semibold mb-2" style={{ color: valColor }}>
-          Avg {decimals > 0 ? value.toFixed(decimals) : Math.round(value).toLocaleString()} {unit}
-        </p>
+
+      {/* ── Today's health summary strip ───────────────────────────── */}
+      {hasData && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10,
+        }}>
+          {[
+            { label: 'On Track',  count: Math.max(0, onTrack), icon: '✅', color: '#10b981' },
+            { label: 'Attention', count: attentionItems.length, icon: '⚠️',  color: '#f59e0b' },
+            { label: 'Urgent',    count: alerts.filter(a => a.severity === 'critical').length, icon: '🚨', color: '#ef4444' },
+          ].map(s => (
+            <div key={s.label} style={{
+              padding: '12px 14px', borderRadius: 14,
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.count}</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
       )}
-      {children}
-    </Card>
+
+      {/* ── Needs your attention ───────────────────────────────────── */}
+      {attentionItems.length > 0 && (
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertTriangle style={{ width: 13, height: 13 }} /> Needs your attention
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {attentionItems.map((a, i) => <AttentionCard key={i} {...a} />)}
+          </div>
+        </div>
+      )}
+
+      {/* ── No data empty state ─────────────────────────────────────── */}
+      {!hasData && (
+        <div style={{
+          textAlign: 'center', padding: '32px 24px', borderRadius: 20,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+        }}>
+          <HeartPulse style={{ width: 40, height: 40, color: 'var(--text-muted)', margin: '0 auto 12px' }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Start with today's check-in</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, marginBottom: 16 }}>
+            Log medication, blood sugar and habits. Your dashboard populates after a few days.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
+            <button onClick={() => navigate('/check-ins')} style={{
+              padding: '8px 18px', borderRadius: 10, background: '#0d9488', color: '#fff',
+              fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer',
+            }}>Log today</button>
+            <button
+              onClick={async () => {
+                if (!activeProfile) return;
+                setSeeding(true);
+                try { await loadDemoData(activeProfile.id); await reload(); }
+                finally { setSeeding(false); }
+              }}
+              disabled={seeding}
+              style={{
+                padding: '8px 18px', borderRadius: 10, border: '1px solid var(--border)',
+                background: 'transparent', color: 'var(--text-secondary)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {seeding ? 'Loading…' : 'Load demo data'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {hasData && (<>
+
+        {/* ── Today snapshot ─────────────────────────────────────────── */}
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+            Today
+          </p>
+          <div style={{
+            padding: '14px 16px', borderRadius: 16,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+          }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px', fontSize: 13 }}>
+              {([
+                { icon: <HeartPulse style={{ width: 14, height: 14, color: '#ef4444' }} />, label: `Medication ${todayMeds === true ? '✓' : todayMeds === false ? '✗' : '–'}`, color: todayMeds === true ? '#10b981' : todayMeds === false ? '#ef4444' : 'var(--text-muted)' },
+                { icon: <Activity style={{ width: 14, height: 14, color: '#0d9488' }} />, label: `Steps ${todaySteps !== null ? todaySteps.toLocaleString() : '–'}`, color: todaySteps !== null && todaySteps >= STEP_GOAL ? '#10b981' : 'var(--text-secondary)' },
+                { icon: <Droplet style={{ width: 14, height: 14, color: '#0ea5e9' }} />, label: `Water ${todayWater !== null ? (todayWater / 1000).toFixed(1) + 'L' : '–'}`, color: todayWater !== null && todayWater >= WATER_GOAL_ML ? '#10b981' : 'var(--text-secondary)' },
+                { icon: <Moon style={{ width: 14, height: 14, color: '#a78bfa' }} />, label: `Sleep ${todaySleep !== null ? todaySleep.toFixed(1) + 'h' : '–'}`, color: todaySleep !== null && todaySleep >= SLEEP_GOAL_HOURS ? '#10b981' : 'var(--text-secondary)' },
+                ...(todayEntry?.glucose_fasting != null ? [{ icon: <Zap style={{ width: 14, height: 14, color: '#f59e0b' }} />, label: `Fasting ${todayEntry.glucose_fasting} mg/dL`, color: todayEntry.glucose_fasting <= GLUCOSE.FASTING_MAX ? '#10b981' : '#f59e0b' }] : []),
+              ] as Array<{ icon: React.ReactNode; label: string; color: string }>).map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {item.icon}
+                  <span style={{ color: item.color, fontWeight: 500 }}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => navigate('/check-ins')} style={{
+              marginTop: 12, fontSize: 11, fontWeight: 600, color: 'var(--accent)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              Edit today's check-in <ChevronRight style={{ width: 12, height: 12 }} />
+            </button>
+          </div>
+        </div>
+
+        {/* ── KPI tiles ──────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
+          <KpiTile
+            label="Fasting sugar · 7-day avg"
+            value={stats.avgFasting === null ? '–' : Math.round(stats.avgFasting).toString()}
+            unit="mg/dL"
+            tone={stats.avgFasting === null ? 'neutral' : stats.avgFasting <= GLUCOSE.FASTING_MAX ? 'good' : 'warn'}
+            note={fastingDiff === null ? `Target ${GLUCOSE.FASTING_MIN}–${GLUCOSE.FASTING_MAX}` : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                {fastingDiff <= 0 ? <TrendingDown style={{ width: 11, height: 11 }} /> : <TrendingUp style={{ width: 11, height: 11 }} />}
+                {Math.abs(Math.round(fastingDiff))} vs last week
+              </span>
+            )}
+          />
+          <KpiTile
+            label="Time in range"
+            value={stats.timeInRange === null ? '–' : Math.round(stats.timeInRange).toString()}
+            unit="%"
+            tone={stats.timeInRange === null ? 'neutral' : stats.timeInRange >= 70 ? 'good' : 'warn'}
+            note="70–180 mg/dL target"
+          />
+          <KpiTile
+            label="Medication adherence"
+            value={stats.adherence === null ? '–' : Math.round(stats.adherence).toString()}
+            unit="%"
+            tone={stats.adherence === null ? 'neutral' : stats.adherence >= 85 ? 'good' : 'danger'}
+            note="of logged days this week"
+          />
+          <KpiTile
+            label="Logging streak"
+            value={streak.toString()}
+            unit={streak === 1 ? 'day' : 'days'}
+            tone={streak >= 5 ? 'good' : 'neutral'}
+            note={`${stats.loggedDays} of 7 days logged`}
+          />
+        </div>
+
+        {/* ── Habit rings ─────────────────────────────────────────────── */}
+        <div style={{
+          padding: '16px 20px', borderRadius: 18,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase' }}>
+              Weekly habits
+            </p>
+            <Link to="/check-ins" style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>See all</Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+            <HabitRing label="Steps" value={stats.avgSteps} max={STEP_GOAL} unit="avg" color="#0d9488"
+              sublabel={`Goal ${(STEP_GOAL/1000).toFixed(0)}k`} />
+            <HabitRing label="Water" value={stats.avgWater !== null ? stats.avgWater / 1000 : null} max={WATER_GOAL_ML / 1000} unit="L" color="#0ea5e9"
+              sublabel={`Goal ${(WATER_GOAL_ML/1000).toFixed(1)}L`} />
+            <HabitRing label="Sleep" value={stats.avgSleep} max={SLEEP_GOAL_HOURS} unit="h" color="#a78bfa"
+              sublabel={`Goal ${SLEEP_GOAL_HOURS}h`} />
+            <HabitRing label="Mood" value={week.filter(c => c.mood === 'good' || c.mood === 'great').length} max={7} unit="days" color="#f472b6"
+              sublabel="Good mood days" />
+          </div>
+        </div>
+
+        {/* ── Blood sugar chart ──────────────────────────────────────── */}
+        <div style={{
+          padding: '16px 20px', borderRadius: 18,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Blood sugar · last 7 days</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Red markers outside 70–250 mg/dL range</p>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['7D','30D','3M'].map(t => (
+                <button key={t} style={{
+                  padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                  background: t === '7D' ? 'var(--accent-bg)' : 'transparent',
+                  color: t === '7D' ? 'var(--accent)' : 'var(--text-muted)',
+                  border: `1px solid ${t === '7D' ? 'var(--accent-border)' : 'var(--border)'}`,
+                  cursor: 'pointer',
+                }}>{t}</button>
+              ))}
+            </div>
+          </div>
+          {week.some(c => c.glucose_fasting !== null || c.glucose_post_meal !== null) ? (
+            <GlucoseChart days={days} checkIns={week} />
+          ) : (
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', padding: '24px 0' }}>
+              No blood sugar readings this week yet.
+            </p>
+          )}
+        </div>
+
+        {/* ── AI Insights ─────────────────────────────────────────────── */}
+        <div style={{
+          padding: '16px 20px', borderRadius: 18,
+          background: 'linear-gradient(135deg,rgba(192,132,252,.08),rgba(129,140,248,.08))',
+          border: '1px solid rgba(192,132,252,.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Brain style={{ width: 16, height: 16, color: '#c084fc' }} />
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase' }}>AI Insights</p>
+            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+              background: 'rgba(192,132,252,.18)', color: '#c084fc', letterSpacing: '.04em',
+            }}>
+              {trendTone === 'good' ? '↑ Improving' : trendTone === 'warn' ? '! Watch' : '→ Stable'}
+            </span>
+          </div>
+          {insights.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Patterns appear after a few days of logs.</p>
+          ) : (
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {insights.slice(0, 3).map((ins, i) => (
+                <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  <span style={{
+                    marginTop: 5, width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                    background: ins.tone === 'positive' ? '#10b981' : '#f59e0b',
+                  }} />
+                  {ins.text}
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link to="/ai-summary" style={{
+            marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 12, fontWeight: 700, color: '#c084fc', textDecoration: 'none',
+          }}>
+            <Sparkles style={{ width: 13, height: 13 }} />
+            Generate full AI summary
+          </Link>
+        </div>
+
+        {/* ── Quick access ────────────────────────────────────────────── */}
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+            Quick access
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
+            {[
+              { icon: FileText,  label: 'Health Vault',    sub: 'Lab reports & docs',   to: '/documents', color: '#60a5fa' },
+              { icon: Watch,     label: 'Wearables',       sub: 'Devices & sync',        to: '/wearables', color: '#4ade80' },
+              { icon: Users,     label: 'Family',          sub: 'Profiles & sharing',    to: '/family',    color: '#fbbf24' },
+              { icon: Clock,     label: 'History',         sub: 'Full timeline',          to: '/timeline',  color: '#f472b6' },
+            ].map(q => (
+              <Link key={q.to} to={q.to} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                borderRadius: 14, background: 'var(--bg-card)', border: '1px solid var(--border)',
+                textDecoration: 'none', transition: 'border-color .2s',
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                  background: `${q.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <q.icon style={{ width: 17, height: 17, color: q.color }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{q.label}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.sub}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Goals mini strip ────────────────────────────────────────── */}
+        {goals.filter(g => g.status === 'active').length > 0 && (
+          <div style={{
+            padding: '14px 18px', borderRadius: 16,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Active goals</p>
+              <Link to="/goals" style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>See all</Link>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {goals.filter(g => g.status === 'active').slice(0, 4).map(g => (
+                <span key={g.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                  background: 'rgba(13,148,136,.1)', color: '#0d9488', border: '1px solid rgba(13,148,136,.2)',
+                }}>
+                  <Target style={{ width: 11, height: 11 }} />{g.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
+          Targets are defaults for adults with Type 2 Diabetes. This app does not replace medical advice.
+        </p>
+      </>)}
+
+      {/* ── Emergency modal ─────────────────────────────────────────── */}
+      {showEmergency && <EmergencyModal onClose={() => setShowEmergency(false)} />}
+    </div>
   );
 }
