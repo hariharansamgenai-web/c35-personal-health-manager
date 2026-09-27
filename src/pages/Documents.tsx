@@ -231,8 +231,8 @@ export function DocumentsPage() {
     <div style={{ display:'flex',flexDirection:'column',gap:18 }}>
 
       {/* ── Header ── */}
-      <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12 }}>
-        <div>
+      <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,flexWrap:'wrap' }}>
+        <div style={{ minWidth:0,flex:'1 1 180px' }}>
           <h2 style={{ fontSize:22,fontWeight:800,color:'var(--text-primary)',letterSpacing:'-.02em' }}>Health Vault</h2>
           <p style={{ fontSize:13,color:'var(--text-secondary)',marginTop:2 }}>Records for {activeProfile.display_name} · Stored privately</p>
         </div>
@@ -248,7 +248,7 @@ export function DocumentsPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display:'flex',gap:4,padding:'4px',borderRadius:14,background:'var(--bg-card)',border:'1px solid var(--border)' }}>
+      <div className="vault-tabs" style={{ display:'flex',gap:4,padding:'4px',borderRadius:14,background:'var(--bg-card)',border:'1px solid var(--border)' }}>
         {tabs.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
             flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,
@@ -268,8 +268,8 @@ export function DocumentsPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       {tab==='records' && (<>
         {/* Search + filter */}
-        <div style={{ display:'flex',gap:10 }}>
-          <div style={{ position:'relative',flex:1 }}>
+        <div style={{ display:'flex',gap:10,flexWrap:'wrap' }}>
+          <div style={{ position:'relative',flex:'1 1 200px' }}>
             <Search style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:15,height:15,color:'var(--text-muted)' }}/>
             <input type="search" placeholder="Search name, doctor, hospital…" value={search} onChange={e=>setSearch(e.target.value)}
               style={{ ...inputStyle,paddingLeft:34,height:40 }}/>

@@ -57,7 +57,7 @@ function ProviderCard({ provider, device, onConnect, onDisconnect, onSync }: Pro
 
   return (
     <Card>
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:gap-4">
         {/* Provider logo placeholder */}
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white text-lg font-bold"
@@ -102,7 +102,7 @@ function ProviderCard({ provider, device, onConnect, onDisconnect, onSync }: Pro
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex w-full shrink-0 gap-2 pl-[3.75rem] sm:w-auto sm:flex-col sm:pl-0">
           {!provider.available ? (
             <Button size="sm" variant="outline" disabled>Coming soon</Button>
           ) : isConnected ? (
@@ -181,7 +181,7 @@ export function WearablesPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
           <p className="text-2xl font-bold text-neutral-900">{PROVIDER_REGISTRY.length}</p>
           <p className="text-sm text-neutral-500">Supported providers</p>
