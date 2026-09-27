@@ -9,37 +9,41 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme: 'light',
   toggle: () => undefined,
-  isDark: true,
+  isDark: false,
 });
+
+// Only an explicit choice via the toggle is stored; everyone else gets light.
+const THEME_KEY = 'pulsepath-theme';
 
 export function useTheme() {
   return useContext(ThemeContext);
 }
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem('phm-theme') as Theme | null;
-  if (stored === 'light' || stored === 'dark') return stored;
-  // Default to dark (Design A identity)
-  return 'dark';
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('phm-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0b1020' : '#ffffff');
   }, [theme]);
 
   function toggle() {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+    setTheme((t) => {
+      const next = t === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+      return next;
+    });
   }
 
   return (
