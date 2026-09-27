@@ -382,7 +382,7 @@ export function AIFoodAnalyser({ onUse }: Props) {
 
           {/* ── Salt & Oil (only for non-barcode paths) ── */}
           {!(mode === 'camera' && detection === 'barcode') && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>🧂 Salt level</p>
                 <div className="space-y-1">
