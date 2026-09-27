@@ -1,5 +1,5 @@
 // PulsePath service worker — app-shell caching, network-first for pages, never caches Supabase/API calls
-const CACHE = 'pulsepath-v1';
+const CACHE = 'pulsepath-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
