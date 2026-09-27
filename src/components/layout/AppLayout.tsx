@@ -13,11 +13,11 @@ export function AppLayout() {
   const viewingOther = activeProfile && selfProfile && activeProfile.id !== selfProfile.id;
 
   return (
-    <div className="app-shell flex overflow-hidden" style={{ background: 'var(--bg-page)' }}>
+    <div className="app-shell flex" style={{ background: 'var(--bg-page)' }}>
 
       {/* ── Permanent sidebar — always visible ── */}
       <aside
-        className="layout-sidebar hidden shrink-0 lg:block"
+        className="layout-sidebar hidden shrink-0 lg:block lg:h-screen lg:overflow-y-auto"
         style={{ width: 232 }}
         aria-label="Main navigation"
       >
@@ -41,10 +41,10 @@ export function AppLayout() {
       )}
 
       {/* ── Main content ── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="app-col flex min-w-0 flex-1 flex-col">
         <TopBar onMenuClick={() => setMobileOpen(true)} />
 
-        <main className="app-main flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
+        <main className="app-main flex-1 px-4 pt-4 sm:py-6 lg:px-6">
           <div className="mx-auto max-w-6xl">
             {viewingOther && (
               <div

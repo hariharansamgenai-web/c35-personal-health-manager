@@ -48,14 +48,17 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
         <button
           onClick={onMenuClick}
-          className="hidden rounded-lg p-2 sm:block lg:hidden"
+          className="hidden"
           style={{ color: 'var(--text-secondary)' }}
           aria-label="Toggle menu"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[10px] sm:hidden" />
-        <h1 className="truncate text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h1>
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 lg:hidden" aria-label="PulsePath home">
+          <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[10px]" />
+          <span className="mbrand">PulsePath</span>
+        </button>
+        <h1 className="hidden truncate text-base font-semibold lg:block" style={{ color: 'var(--text-primary)' }}>{title}</h1>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">

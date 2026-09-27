@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, HeartPulse, Apple, FileText, Grid2x2, X,
+  Home, Apple, FileText, Grid2x2, X, Plus,
   Dumbbell, Target, Calendar, Share2, Sparkles, Watch, User, LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-const tabs = [
-  { to: '/dashboard', label: 'Home',      icon: LayoutDashboard, color: '#63b3ed' },
-  { to: '/check-ins', label: 'Check-in',  icon: HeartPulse,      color: '#f87171' },
-  { to: '/nutrition', label: 'Food',      icon: Apple,           color: '#fb923c' },
-  { to: '/documents', label: 'Vault',     icon: FileText,        color: '#60a5fa' },
+const left = [
+  { to: '/dashboard', label: 'Home', icon: Home },
+  { to: '/nutrition', label: 'Food', icon: Apple },
+];
+const right = [
+  { to: '/documents', label: 'Vault', icon: FileText },
 ];
 
 const more = [
@@ -23,39 +24,58 @@ const more = [
   { to: '/profile',    label: 'Profile',    icon: User,      color: '#94a3b8' },
 ];
 
+function Tab({ to, label, icon: Icon }: { to: string; label: string; icon: typeof Home }) {
+  return (
+    <NavLink to={to} className="mnav-tab">
+      {({ isActive }) => (
+        <>
+          <Icon className="h-[22px] w-[22px]" strokeWidth={isActive ? 2.4 : 1.9}
+            style={{ color: isActive ? 'var(--mnav-active)' : 'var(--mnav-idle)' }} />
+          <span style={{ color: isActive ? 'var(--mnav-active)' : 'var(--mnav-idle)', fontWeight: isActive ? 700 : 500 }}>{label}</span>
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const moreActive = more.some((m) => location.pathname.startsWith(m.to));
+  const onCheckIn = location.pathname.startsWith('/check-ins');
 
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => { setOpen(false); window.scrollTo(0, 0); }, [location.pathname]);
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
 
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-label="More sections">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="mobile-sheet animate-sheet-up">
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full" style={{ background: 'var(--border)' }} />
-            <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>All sections</p>
-              <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-lg p-1.5" style={{ color: 'var(--text-muted)' }}>
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="All sections">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
+          <div className="mnav-sheet">
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ background: 'var(--border)' }} />
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>All sections</p>
+              <button onClick={() => setOpen(false)} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ background: 'var(--bg-page)', color: 'var(--text-secondary)' }}>
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1">
               {more.map((m) => (
-                <NavLink key={m.to} to={m.to} className="mobile-sheet-item">
+                <NavLink key={m.to} to={m.to} className="mnav-sheet-item">
                   {({ isActive }) => (
                     <>
-                      <span className="flex h-11 w-11 items-center justify-center rounded-2xl"
-                        style={{ background: isActive ? `${m.color}33` : `${m.color}1a` }}>
-                        <m.icon className="h-5 w-5" style={{ color: m.color }} />
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                        style={{ background: `${m.color}${isActive ? '40' : '1f'}`, boxShadow: isActive ? `inset 0 0 0 1.5px ${m.color}` : undefined }}>
+                        <m.icon className="h-[22px] w-[22px]" style={{ color: m.color }} />
                       </span>
-                      <span className="text-[11px] font-medium" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                        {m.label}
-                      </span>
+                      <span className="text-[11.5px] font-medium leading-tight" style={{ color: 'var(--text-primary)' }}>{m.label}</span>
                     </>
                   )}
                 </NavLink>
@@ -63,9 +83,9 @@ export function MobileNav() {
             </div>
             <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
               style={{ background: 'var(--bg-page)', border: '1px solid var(--border)' }}>
-              <p className="min-w-0 truncate text-xs" style={{ color: 'var(--text-muted)' }}>{user?.email}</p>
+              <p className="min-w-0 truncate text-[13px]" style={{ color: 'var(--text-secondary)' }}>{user?.email}</p>
               <button onClick={() => { setOpen(false); signOut(); }}
-                className="flex shrink-0 items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--danger)' }}>
+                className="flex min-h-[40px] shrink-0 items-center gap-1.5 px-1 text-sm font-semibold" style={{ color: 'var(--danger)' }}>
                 <LogOut className="h-4 w-4" /> Sign out
               </button>
             </div>
@@ -73,24 +93,27 @@ export function MobileNav() {
         </div>
       )}
 
-      <nav className="mobile-tabbar lg:hidden" aria-label="Main navigation">
-        {tabs.map((t) => (
-          <NavLink key={t.to} to={t.to} className="mobile-tab">
-            {({ isActive }) => (
-              <>
-                <span className="mobile-tab-icon" style={isActive ? { background: `${t.color}26` } : undefined}>
-                  <t.icon className="h-5 w-5" style={{ color: isActive ? t.color : 'var(--text-muted)' }} strokeWidth={isActive ? 2.4 : 2} />
-                </span>
-                <span style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: isActive ? 700 : 500 }}>{t.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-        <button onClick={() => setOpen(true)} className="mobile-tab" aria-label="More sections" aria-expanded={open}>
-          <span className="mobile-tab-icon" style={moreActive ? { background: 'rgba(245,158,11,.18)' } : undefined}>
-            <Grid2x2 className="h-5 w-5" style={{ color: moreActive ? '#f59e0b' : 'var(--text-muted)' }} />
-          </span>
-          <span style={{ color: moreActive ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: moreActive ? 700 : 500 }}>More</span>
+      <nav className="mnav lg:hidden" aria-label="Main navigation">
+        {left.map((t) => <Tab key={t.to} {...t} />)}
+
+        <div className="mnav-fab-slot">
+          <button
+            onClick={() => navigate('/check-ins')}
+            className="mnav-fab"
+            aria-label="Log today's check-in"
+            aria-current={onCheckIn ? 'page' : undefined}
+          >
+            <Plus className="h-7 w-7" strokeWidth={2.6} />
+          </button>
+          <span className="mnav-fab-label" style={{ color: onCheckIn ? 'var(--mnav-active)' : 'var(--mnav-idle)', fontWeight: onCheckIn ? 700 : 500 }}>Check-in</span>
+        </div>
+
+        {right.map((t) => <Tab key={t.to} {...t} />)}
+
+        <button onClick={() => setOpen(true)} className="mnav-tab" aria-label="More sections" aria-expanded={open}>
+          <Grid2x2 className="h-[22px] w-[22px]" strokeWidth={moreActive ? 2.4 : 1.9}
+            style={{ color: moreActive ? 'var(--mnav-active)' : 'var(--mnav-idle)' }} />
+          <span style={{ color: moreActive ? 'var(--mnav-active)' : 'var(--mnav-idle)', fontWeight: moreActive ? 700 : 500 }}>More</span>
         </button>
       </nav>
     </>
