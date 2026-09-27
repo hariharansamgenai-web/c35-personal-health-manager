@@ -112,18 +112,19 @@ Write the health pattern summary now.`;
       const geminiBody = {
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { maxOutputTokens: 600, temperature: 0.4 },
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.4 },
       };
 
       const { data: proxyData, error: fnError } = await supabase.functions.invoke('gemini-proxy', {
-        body: { model: 'gemini-2.0-flash', body: geminiBody },
+        body: { model: 'gemini-3.5-flash', body: geminiBody },
       });
 
       if (fnError) throw new Error(fnError.message ?? 'Could not reach AI service.');
       if (proxyData?.error) throw new Error(String(proxyData.error));
 
       const data = proxyData;
-      const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const text: string = ((data?.candidates?.[0]?.content?.parts ?? []) as Array<{ text?: string; thought?: boolean }>)
+        .filter((p) => !p.thought).map((p) => p.text ?? '').join('').trim();
       if (!text) throw new Error('Gemini returned an empty response. Please try again.');
 
       const disclaimer = 'This is an informational summary only — not medical advice. Please consult your healthcare provider for medical decisions.';
