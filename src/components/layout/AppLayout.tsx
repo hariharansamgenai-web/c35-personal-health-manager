@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { MobileNav } from './MobileNav';
 import { useActiveProfile } from '@/context/ActiveProfileContext';
 import { RELATIONSHIP_LABELS } from '@/lib/profiles';
 
@@ -12,11 +13,11 @@ export function AppLayout() {
   const viewingOther = activeProfile && selfProfile && activeProfile.id !== selfProfile.id;
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-page)' }}>
+    <div className="app-shell flex overflow-hidden" style={{ background: 'var(--bg-page)' }}>
 
       {/* ── Permanent sidebar — always visible ── */}
       <aside
-        className="layout-sidebar shrink-0"
+        className="layout-sidebar hidden shrink-0 lg:block"
         style={{ width: 232 }}
         aria-label="Main navigation"
       >
@@ -25,7 +26,7 @@ export function AppLayout() {
 
       {/* ── Mobile overlay drawer (small screens only, <640px) ── */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 sm:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
@@ -43,7 +44,7 @@ export function AppLayout() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar onMenuClick={() => setMobileOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
+        <main className="app-main flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
           <div className="mx-auto max-w-6xl">
             {viewingOther && (
               <div
@@ -71,6 +72,7 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+      <MobileNav />
     </div>
   );
 }

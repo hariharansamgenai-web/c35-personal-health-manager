@@ -45,19 +45,20 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header className="layout-topbar">
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
         <button
           onClick={onMenuClick}
-          className="rounded-lg p-2 lg:hidden"
+          className="hidden rounded-lg p-2 sm:block lg:hidden"
           style={{ color: 'var(--text-secondary)' }}
           aria-label="Toggle menu"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h1>
+        <img src="/icons/icon-192.png" alt="" className="h-8 w-8 rounded-[10px] sm:hidden" />
+        <h1 className="truncate text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h1>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         {/* Dark / Light toggle */}
         <button
           onClick={toggle}
@@ -74,7 +75,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
 
         <ProfileSwitcher />
 
-        <div className="relative" ref={menuRef}>
+        <div className="relative hidden sm:block" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Account menu"
