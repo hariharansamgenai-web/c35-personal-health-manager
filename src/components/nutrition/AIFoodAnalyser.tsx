@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import {
-  analyseFoodImage, analyseFoodText, lookupBarcode,
+  analyseFoodImage, analyseFoodText, lookupBarcode, GEMINI_MODEL,
   type BarcodeResult, type GeminiFoodItem, type GeminiFoodResult,
 } from '@/lib/geminiNutrition';
 import { SALT_LEVELS, OIL_LEVELS, type SaltLevel, type OilLevel } from '@/lib/indianNutrition';
@@ -95,8 +95,7 @@ export function AIFoodAnalyser({ onUse }: Props) {
           // Food photo path
           if (!imageFile) { setError('Tap the camera button to take a food photo first.'); setLoading(false); return; }
           const b64 = await fileToBase64(imageFile);
-          const mime = imageFile.type === 'image/png' ? 'image/png' : 'image/jpeg';
-          const res = await analyseFoodImage(b64, mime, isVeg, saltLevel, oilLevel);
+          const res = await analyseFoodImage(b64, 'image/jpeg', isVeg, saltLevel, oilLevel);
           setResult(res);
         }
       } else {
@@ -625,11 +624,11 @@ async function scanBarcodeFromImage(file: File): Promise<string | null> {
   // ── Layer 3: Gemini Vision (last resort — reads printed digits under bars) ─
   try {
     const b64 = await fileToBase64(file);
-    const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const mime = 'image/jpeg';
     const { supabase } = await import('@/lib/supabase');
     const { data, error } = await supabase.functions.invoke('gemini-proxy', {
       body: {
-        model: 'gemini-1.5-flash',
+        model: GEMINI_MODEL,
         body: {
           contents: [{
             parts: [
@@ -642,13 +641,13 @@ If you cannot clearly read all digits, return: NONE`,
               { inline_data: { mime_type: mime, data: b64 } },
             ],
           }],
-          generationConfig: { temperature: 0, maxOutputTokens: 32 },
+          generationConfig: { temperature: 0, maxOutputTokens: 1024 },
         },
       },
     });
     if (!error && data) {
       const raw = data as {candidates?: Array<{content?: {parts?: Array<{text?: string}>}}>};
-      const text: string = raw?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const text: string = (raw?.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('');
       const digits = text.trim().replace(/\D/g, '');
       if (digits.length >= 8 && digits.length <= 14) return digits;
     }
@@ -657,11 +656,29 @@ If you cannot clearly read all digits, return: NONE`,
   return null;
 }
 
+/**
+ * Phone photos are often 4–12 MB (and sometimes HEIC/WebP). Re-encode to a
+ * JPEG no larger than 1280 px so the upload is small and Gemini always gets
+ * a format it accepts.
+ */
 async function fileToBase64(file: File): Promise<string> {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res((r.result as string).split(',')[1]);
-    r.onerror = () => rej(new Error('Could not read file'));
-    r.readAsDataURL(file);
-  });
+  const MAX = 1280;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  } catch {
+    // Fallback: send the original bytes
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res((r.result as string).split(',')[1]);
+      r.onerror = () => rej(new Error('Could not read the photo'));
+      r.readAsDataURL(file);
+    });
+  }
 }
