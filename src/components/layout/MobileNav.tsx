@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, Apple, FileText, Grid2x2, X, Plus,
-  Dumbbell, Target, Calendar, Share2, Sparkles, Watch, User, LogOut,
+  Dumbbell, Target, Calendar, Share2, Sparkles, Watch, User, LogOut, Moon,
 } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
 const left = [
@@ -41,6 +42,7 @@ function Tab({ to, label, icon: Icon }: { to: string; label: string; icon: typeo
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { isDark, toggle } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const moreActive = more.some((m) => location.pathname.startsWith(m.to));
@@ -81,7 +83,19 @@ export function MobileNav() {
                 </NavLink>
               ))}
             </div>
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+            <button onClick={toggle} role="switch" aria-checked={isDark}
+              className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3"
+              style={{ background: 'var(--bg-page)', border: '1px solid var(--border)' }}>
+              <span className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <Moon className="h-[18px] w-[18px]" style={{ color: '#8b5cf6' }} /> Dark mode
+              </span>
+              <span className="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+                style={{ background: isDark ? '#8b5cf6' : 'var(--border)' }}>
+                <span className="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: isDark ? 'translateX(24px)' : 'translateX(4px)' }} />
+              </span>
+            </button>
+            <div className="mt-2 flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
               style={{ background: 'var(--bg-page)', border: '1px solid var(--border)' }}>
               <p className="min-w-0 truncate text-[13px]" style={{ color: 'var(--text-secondary)' }}>{user?.email}</p>
               <button onClick={() => { setOpen(false); signOut(); }}
