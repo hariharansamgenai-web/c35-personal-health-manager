@@ -1,17 +1,20 @@
 /**
- * Gemini 1.5 Flash — Indian food vision + text nutrition analyser
+ * Gemini Flash — Indian food vision + text nutrition analyser
  *
  * Calls are routed through the Supabase Edge Function `gemini-proxy`
  * to avoid CORS issues in the browser. The Gemini API key lives in
  * Supabase secrets (GEMINI_API_KEY), never in the frontend bundle.
  *
  * Architecture (PDF spec):
- *   - Gemini 1.5 Flash for multi-dish thali recognition
+ *   - Gemini Flash (current model, auto-fallback) for multi-dish thali recognition
  *   - Open Food Facts REST for packaged Indian barcodes (free)
  *   - ICMR-NIN / IFCT 2017 nutritional values in the prompt
  */
 
 import { supabase } from '@/lib/supabase';
+
+/** Current Gemini model; the Edge Function falls back to newer/other models if this one is retired. */
+export const GEMINI_MODEL = 'gemini-3.5-flash';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,34 +71,20 @@ export interface BarcodeResult {
 // Prompt
 // ---------------------------------------------------------------------------
 
-const THALI_PROMPT = `You are an expert Indian nutritionist trained on ICMR-NIN 2020 and IFCT 2017 data.
-Analyse the food photo or description. Identify ALL items (e.g. roti, dal, sabzi, curd, rice, pickle).
-Return ONLY a valid JSON array with NO markdown fences, no explanation:
+const THALI_PROMPT = `You are an expert Indian clinical nutritionist using ICMR-NIN 2020 and IFCT 2017 food composition data.
 
-[
-  {
-    "dish": "specific Indian food name",
-    "serving_unit": "katori|roti|tbsp|piece|glass|plate|g",
-    "estimated_qty": number,
-    "weight_g": number,
-    "calories": number,
-    "protein_g": number,
-    "carbs_g": number,
-    "fat_g": number,
-    "fiber_g": number,
-    "sodium_mg": number,
-    "is_veg": boolean,
-    "indian_context": "e.g. South Indian breakfast staple",
-    "confidence": "high|medium|low"
-  }
-]
+Task: identify EVERY distinct food item visible in the photo (or described in the text) and estimate the portion actually shown.
+- Name dishes specifically (e.g. "Butter chicken", "Tandoori roti", "Paneer butter masala", "Jeera rice"), not generically ("curry", "bread").
+- Judge meat vs paneer vs vegetables from the image itself. The user's diet setting is only context: never relabel a dish to match it.
+- Count countable items (rotis, idlis, pieces) and estimate bowls in katori (1 katori ≈ 150 g cooked).
+- Standard weights: medium roti/chapati ≈ 40 g, naan ≈ 90 g, tandoori roti ≈ 60 g, 1 tbsp ≈ 15 g, 1 cup cooked rice ≈ 150 g.
+- Nutrient values must be for the ESTIMATED PORTION (not per 100 g) and internally consistent: calories ≈ 4×protein + 4×carbs + 9×fat (±10%).
+- Adjust fat for visible oil, ghee, butter or cream, and sodium for the stated salt level.
+- confidence = "low" if the item is unclear or partly hidden.
 
-Rules:
-- All macro values are for the ESTIMATED PORTION (not per 100g).
-- Standard sizes: 1 katori≈150g, 1 medium roti≈40g, 1 tbsp≈15g.
-- Use ICMR-NIN/IFCT 2017 values. Adjust fat_g for visible oil/ghee.
-- Return single-element array for one food item.
-- Set confidence "low" if uncertain.`;
+Return ONLY a JSON array (no markdown, no commentary), one object per item:
+[{"dish":"","serving_unit":"katori|roti|tbsp|piece|glass|plate|g","estimated_qty":0,"weight_g":0,"calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0,"sodium_mg":0,"is_veg":true,"indian_context":"","confidence":"high|medium|low"}]
+If there is no food in the image, return [].`;
 
 // ---------------------------------------------------------------------------
 // Core proxy caller
@@ -105,15 +94,28 @@ async function callGeminiProxy(model: string, body: object): Promise<object> {
   const { data, error } = await supabase.functions.invoke('gemini-proxy', {
     body: { model, body },
   });
-  if (error) throw new Error(error.message ?? 'Gemini proxy error');
+  if (error) {
+    // supabase-js hides the body behind "non-2xx"; read the real reason.
+    let detail = '';
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') detail = (await ctx.json())?.error ?? '';
+    } catch { /* ignore */ }
+    throw new Error(detail || (error.message?.includes('non-2xx')
+      ? 'The AI food service is unavailable right now. Please try again in a minute.'
+      : error.message) || 'Gemini proxy error');
+  }
   if ((data as Record<string,unknown>)?.error) throw new Error(String((data as Record<string,unknown>).error));
   return data as object;
 }
 
 async function callGeminiAndNormalize(model: string, body: object): Promise<GeminiFoodResult> {
   const data = await callGeminiProxy(model, body) as Record<string, unknown>;
-  const raw: string = (data?.candidates as Array<{content:{parts:Array<{text:string}>}}>)?.[0]?.content?.parts?.[0]?.text ?? '';
-  const clean = raw.replace(/```json|```/g, '').trim();
+  const parts = (data?.candidates as Array<{content?:{parts?:Array<{text?:string; thought?:boolean}>}}>)?.[0]?.content?.parts ?? [];
+  const raw = parts.filter(p => !p.thought && p.text).map(p => p.text).join('');
+  const cleaned = raw.replace(/```json|```/g, '').trim();
+  const start = cleaned.search(/[[{]/);
+  const clean = start >= 0 ? cleaned.slice(start) : cleaned;
 
   let items: GeminiFoodItem[];
   try {
@@ -123,22 +125,38 @@ async function callGeminiAndNormalize(model: string, body: object): Promise<Gemi
     throw new Error('Could not parse Gemini response. Try a clearer photo or description.');
   }
 
-  if (!items.length) throw new Error('Gemini returned no food items.');
+  items = items
+    .filter((i) => i && i.dish)
+    .map((i) => ({
+      ...i,
+      weight_g: Math.max(0, Number(i.weight_g) || 0),
+      calories: Math.max(0, Math.round(Number(i.calories) || 0)),
+      protein_g: Math.max(0, Number(i.protein_g) || 0),
+      carbs_g: Math.max(0, Number(i.carbs_g) || 0),
+      fat_g: Math.max(0, Number(i.fat_g) || 0),
+      fiber_g: Math.max(0, Number(i.fiber_g) || 0),
+      sodium_mg: Math.max(0, Number(i.sodium_mg) || 0),
+    }));
+  if (!items.length) throw new Error('No food recognised. Try a closer, well-lit photo of the plate.');
 
   const primary = items[0];
-  const totalWeight = items.reduce((s, i) => s + (i.weight_g || 0), 0) || primary.weight_g;
+  // Whole-plate totals (all items), expressed per 100 g of the plate
+  const sum = (k: 'calories' | 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g' | 'sodium_mg') =>
+    items.reduce((s, i) => s + (i[k] || 0), 0);
+  const totalWeight = items.reduce((s, i) => s + (i.weight_g || 0), 0);
+  const per100 = (v: number) => (totalWeight ? (v / totalWeight) * 100 : 0);
 
   return {
     items,
     food_name:           items.length > 1 ? `Thali (${items.length} items)` : primary.dish,
     description:         items.map(i => i.dish).join(', '),
     estimated_portion_g: totalWeight,
-    calories_per_100g:   primary.weight_g ? Math.round((primary.calories / primary.weight_g) * 100) : 0,
-    protein_g:           primary.weight_g ? (primary.protein_g / primary.weight_g) * 100 : 0,
-    carbs_g:             primary.weight_g ? (primary.carbs_g   / primary.weight_g) * 100 : 0,
-    fat_g:               primary.weight_g ? (primary.fat_g     / primary.weight_g) * 100 : 0,
-    fiber_g:             primary.weight_g ? (primary.fiber_g   / primary.weight_g) * 100 : 0,
-    sodium_mg_per_100g:  primary.weight_g ? (primary.sodium_mg / primary.weight_g) * 100 : 0,
+    calories_per_100g:   Math.round(per100(sum('calories'))),
+    protein_g:           per100(sum('protein_g')),
+    carbs_g:             per100(sum('carbs_g')),
+    fat_g:               per100(sum('fat_g')),
+    fiber_g:             per100(sum('fiber_g')),
+    sodium_mg_per_100g:  per100(sum('sodium_mg')),
     is_veg:              items.every(i => i.is_veg),
     indian_context:      primary.indian_context,
     confidence:          primary.confidence,
@@ -163,9 +181,9 @@ export async function analyseFoodImage(
         { inline_data: { mime_type: mimeType, data: base64Image } },
       ],
     }],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+    generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: 'application/json' },
   };
-  return callGeminiAndNormalize('gemini-1.5-flash', body);
+  return callGeminiAndNormalize(GEMINI_MODEL, body);
 }
 
 export async function analyseFoodText(
@@ -177,9 +195,9 @@ export async function analyseFoodText(
   const prompt = `${THALI_PROMPT}\n\nFood: "${description}"\nDiet: ${isVeg ? 'Vegetarian' : 'Non-vegetarian'}. Salt: ${saltLevel}. Oil: ${oilLevel}.`;
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+    generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: 'application/json' },
   };
-  return callGeminiAndNormalize('gemini-1.5-flash', body);
+  return callGeminiAndNormalize(GEMINI_MODEL, body);
 }
 
 // ---------------------------------------------------------------------------
